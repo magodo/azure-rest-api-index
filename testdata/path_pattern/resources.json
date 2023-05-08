@@ -1,0 +1,77 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "2022-09-01"
+  },
+  "host": "management.azure.com",
+  "paths": {
+    "/providers/Microsoft.Resources/operations": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "./parameters/parameters.json#/parameters/ApiVersionParameter"
+          }
+        ]
+      }
+    },
+    "/{scope}/providers/Microsoft.Resources/deployments/{deploymentName}": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "#/parameters/ScopeParameter"
+          },
+          {
+            "$ref": "#/parameters/DeploymentNameParameter"
+          },
+          {
+            "$ref": "./parameters/parameters.json#/parameters/ApiVersionParameter"
+          }
+        ]
+      }
+    },
+    "/{resourceId}": {
+      "get": {
+        "parameters": [
+          {
+            "name": "resourceId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "x-ms-skip-url-encoding": true
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": "The API version to use for the operation.",
+            "x-ms-api-version": false
+          }
+        ]
+      }
+    },
+    "/{nonexist}": {}
+  },
+  "parameters": {
+    "ScopeParameter": {
+      "name": "scope",
+      "in": "path",
+      "required": true,
+      "type": "string",
+      "description": "The resource scope.",
+      "x-ms-parameter-location": "method",
+      "x-ms-skip-url-encoding": true
+    },
+    "DeploymentNameParameter": {
+      "name": "deploymentName",
+      "in": "path",
+      "required": true,
+      "type": "string",
+      "pattern": "^[-\\w\\._\\(\\)]+$",
+      "x-ms-parameter-location": "method",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The name of the deployment."
+    }
+  }
+}
