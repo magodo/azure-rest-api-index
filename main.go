@@ -15,7 +15,7 @@ func main() {
 
 	SetLogger(logger)
 
-	if _, err := BuildIndex("../azure-rest-api-specs/specification"); err != nil {
+	if _, err := BuildIndex("../azure-rest-api-specs/specification", "dedup.json"); err != nil {
 		log.Fatal(err)
 	}
 }

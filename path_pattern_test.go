@@ -10,55 +10,61 @@ import (
 func TestParsePathPatternFromSwagger(t *testing.T) {
 	cases := []struct {
 		path     string
-		expect   PathPattern
+		expect   []PathPattern
 		hasError bool
 	}{
 		{
 			path: "/providers/Microsoft.Resources/operations",
-			expect: PathPattern{
-				Segments: []PathSegment{
-					{
-						FixedName: "providers",
-					},
-					{
-						FixedName: "Microsoft.Resources",
-					},
-					{
-						FixedName: "operations",
+			expect: []PathPattern{
+				{
+					Segments: []PathSegment{
+						{
+							FixedName: "providers",
+						},
+						{
+							FixedName: "Microsoft.Resources",
+						},
+						{
+							FixedName: "operations",
+						},
 					},
 				},
 			},
 		},
 		{
 			path: "/{scope}/providers/Microsoft.Resources/deployments/{deploymentName}",
-			expect: PathPattern{
-				Segments: []PathSegment{
-					{
-						IsParameter: true,
-						IsMulti:     true,
-					},
-					{
-						FixedName: "providers",
-					},
-					{
-						FixedName: "Microsoft.Resources",
-					},
-					{
-						FixedName: "deployments",
-					},
-					{
-						IsParameter: true,
+			expect: []PathPattern{
+				{
+					Segments: []PathSegment{
+						{
+							IsParameter: true,
+							IsMulti:     true,
+						},
+						{
+							FixedName: "providers",
+						},
+						{
+							FixedName: "Microsoft.Resources",
+						},
+						{
+							FixedName: "deployments",
+						},
+						{
+							IsParameter: true,
+						},
 					},
 				},
 			},
 		},
 		{
 			path: "/{resourceId}",
-			expect: PathPattern{
-				Segments: []PathSegment{
-					{
-						IsParameter: true,
-						IsMulti:     true,
+			expect: []PathPattern{
+				{
+					Segments: []PathSegment{
+						{
+							IsParameter: true,
+							IsMulti:     true,
+						},
 					},
 				},
 			},
@@ -66,6 +72,49 @@ func TestParsePathPatternFromSwagger(t *testing.T) {
 		{
 			path:     "/{nonexist}",
 			hasError: true,
+		},
+		{
+			path: "/providers/Microsoft.CostManagement/{externalCloudProviderType}/{externalCloudProviderId}/alerts",
+			expect: []PathPattern{
+				{
+					Segments: []PathSegment{
+						{
+							FixedName: "providers",
+						},
+						{
+							FixedName: "Microsoft.CostManagement",
+						},
+						{
+							FixedName: "externalBillingAccounts",
+						},
+						{
+							IsParameter: true,
+						},
+						{
+							FixedName: "alerts",
+						},
+					},
+				},
+				{
+					Segments: []PathSegment{
+						{
+							FixedName: "providers",
+						},
+						{
+							FixedName: "Microsoft.CostManagement",
+						},
+						{
+							FixedName: "externalSubscriptions",
+						},
+						{
+							IsParameter: true,
+						},
+						{
+							FixedName: "alerts",
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -82,7 +131,7 @@ func TestParsePathPatternFromSwagger(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.expect, *p)
+			require.Equal(t, tt.expect, p)
 		})
 	}
 }

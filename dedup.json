@@ -1,0 +1,12 @@
+[
+    {
+        "matcher": {
+            "rp": "MICROSOFT.COMPUTE",
+            "version": "2020-09-30",
+            "rt": "/GALLERIES"
+        },
+        "picker": {
+            "spec_path": "/stable/2020-09-30/gallery.json"
+        }
+    }
+]

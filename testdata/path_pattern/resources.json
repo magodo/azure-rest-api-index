@@ -44,13 +44,27 @@
             "in": "query",
             "required": true,
             "type": "string",
-            "description": "The API version to use for the operation.",
             "x-ms-api-version": false
           }
         ]
       }
     },
-    "/{nonexist}": {}
+    "/{nonexist}": {},
+    "/providers/Microsoft.CostManagement/{externalCloudProviderType}/{externalCloudProviderId}/alerts": {
+      "get": {
+        "parameters": [
+          {
+            "$ref": "./parameters/parameters.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/externalCloudProviderTypeParameter"
+          },
+          {
+            "$ref": "#/parameters/externalCloudProviderIdParameter"
+          }
+        ]
+      }
+    }
   },
   "parameters": {
     "ScopeParameter": {
@@ -72,6 +86,26 @@
       "minLength": 1,
       "maxLength": 64,
       "description": "The name of the deployment."
+    },
+    "externalCloudProviderTypeParameter": {
+      "name": "externalCloudProviderType",
+      "in": "path",
+      "required": true,
+      "type": "string",
+      "enum": [
+        "externalSubscriptions",
+        "externalBillingAccounts"
+      ],
+      "description": "The external cloud provider type associated with dimension/query operations. This includes 'externalSubscriptions' for linked account and 'externalBillingAccounts' for consolidated account.",
+      "x-ms-parameter-location": "method"
+    },
+    "externalCloudProviderIdParameter": {
+      "name": "externalCloudProviderId",
+      "in": "path",
+      "required": true,
+      "type": "string",
+      "description": "This can be '{externalSubscriptionId}' for linked account or '{externalBillingAccountId}' for consolidated account used with dimension/query operations.",
+      "x-ms-parameter-location": "method"
     }
   }
 }

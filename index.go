@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,23 +9,22 @@ import (
 	"strings"
 
 	"github.com/go-openapi/jsonpointer"
+	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
 )
 
 type Index struct {
-	rootdir      string
-	indexFixedRP map[OpLocatorFixedRP]CandidateOperations
-	indexGlobRP  map[OpLocatorGlobRP]CandidateOperations
+	rootdir string
+	ops     map[OpLocator]OperationRefs
 }
 
-type OpLocatorFixedRP struct {
+const Wildcard = "*"
+
+type OpLocator struct {
 	// Upper cased RP name, e.g. MICROSOFT.COMPUTE. This might be "" for API path that has no explicit RP defined (e.g. /subscriptions/{subscriptionId})
+	// This can be "*" to indicate it maps any RP
 	RP string
-	OpLocatorGlobRP
-}
-
-type OpLocatorGlobRP struct {
 	// API version, e.g. 2020-10-01-preview
 	Version string
 	// Upper cased resource type, e.g. /VIRTUALNETWORKS/SUBNETS
@@ -35,20 +35,32 @@ type OpLocatorGlobRP struct {
 	Method OperationKind
 }
 
-// CandidateOperations represents a map of path patterns that maps to the same operation locator.
-type CandidateOperations map[PathPatternStr]OperationRefStr
+// OperationRefs represents a set of operation defintion (in form of JSON reference) that are mapped by the same operation locator.
+// Since for a given operation locator, there might maps to multiple operation definition, only differing by the contained path pattern, there fore the actual operation ref is keyed by the containing path pattern.
+// The value is a JSON reference to the operation, e.g. <dir>/foo.json#/paths/~1subscriptions~1{subscriptionId}~1providers~1{resourceProviderNamespace}~1register/post
+type OperationRefs map[PathPatternStr]jsonreference.Ref
 
-// PathPatternStr represents an API path pattern, with all the fixed segment upper cased, and all the parameterized segment as a literal "{}", or "{*}" (for x-ms-skip-url-encode).
+// PathPatternStr represents an API path pattern, with all the fixed segment upper cased, and all the parameterized segment as a literal "{}", or "{*}" (for x-ms-skip-url-encoding).
 type PathPatternStr string
 
-// The JSON reference to the operation, e.g. <dir>/foo.json#/paths/~1subscriptions~1{subscriptionId}~1providers~1{resourceProviderNamespace}~1register/post
-type OperationRefStr string
-
-func BuildIndex(rootdir string) (*Index, error) {
+func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
 	index := &Index{
-		rootdir:      rootdir,
-		indexFixedRP: map[OpLocatorFixedRP]CandidateOperations{},
-		indexGlobRP:  map[OpLocatorGlobRP]CandidateOperations{},
+		rootdir: rootdir,
+		ops:     map[OpLocator]OperationRefs{},
+	}
+
+	deduplicator := Deduplicator{}
+
+	if dedupFile != "" {
+		b, err := os.ReadFile(dedupFile)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %v", dedupFile, err)
+		}
+		var records DeduplicateRecords
+		if err := json.Unmarshal(b, &records); err != nil {
+			return nil, fmt.Errorf("unmarshal %s: %v", dedupFile, err)
+		}
+		deduplicator = records.ToDeduplicator()
 	}
 
 	logger.Info("Collecting specs", "dir", rootdir)
@@ -59,22 +71,83 @@ func BuildIndex(rootdir string) (*Index, error) {
 	logger.Info(fmt.Sprintf("%d specs collected", len(l)))
 
 	logger.Info("Parsing specs")
+
+	type dupkey struct {
+		OpLocator
+		PathPatternStr
+	}
+
+	dups := map[dupkey][]jsonreference.Ref{}
+
 	for _, spec := range l {
-		mFix, mGlob, err := parseSpec(spec)
+		m, err := parseSpec(spec)
 		if err != nil {
 			return nil, fmt.Errorf("parsing spec %s: %v", spec, err)
 		}
-		for k, v := range mFix {
-			if len(index.indexFixedRP[k]) == 0 {
-				index.indexFixedRP[k] = CandidateOperations{}
+		for k, mm := range m {
+			if len(index.ops[k]) == 0 {
+				index.ops[k] = OperationRefs{}
 			}
-			index.indexFixedRP[k][v.PathPatternStr] = v.OperationRefStr
+			for ppattern, ref := range mm {
+				if exist, ok := index.ops[k][ppattern]; ok {
+					// Temporarily record duplicate operation definitions and resolve it later
+					k := dupkey{
+						OpLocator:      k,
+						PathPatternStr: ppattern,
+					}
+					if len(dups[k]) == 0 {
+						dups[k] = append(dups[k], exist)
+					}
+					dups[k] = append(dups[k], ref)
+					continue
+				}
+				index.ops[k][ppattern] = ref
+			}
 		}
-		for k, v := range mGlob {
-			if len(index.indexGlobRP[k]) == 0 {
-				index.indexGlobRP[k] = CandidateOperations{}
+	}
+
+	// resolving any duplicates
+	if deduplicator != nil {
+		for k, refs := range dups {
+			var picker *DedupPicker
+			for matcher, p := range deduplicator {
+				p := p
+				if matcher.Match(k.OpLocator, string(k.PathPatternStr)) {
+					if picker != nil {
+						panic(fmt.Sprintf("Duplicate matcher in duplicator that match %s", k))
+					}
+					picker = &p
+				}
 			}
-			index.indexGlobRP[k][v.PathPatternStr] = v.OperationRefStr
+
+			if picker != nil {
+				var pickCnt int
+				var pickRef jsonreference.Ref
+				for _, ref := range refs {
+					if picker.Match(ref) {
+						pickCnt++
+						pickRef = ref
+					}
+				}
+
+				if pickCnt == 0 {
+					panic(fmt.Sprintf("Nothing get deduplicated for %s", k))
+				}
+
+				if pickCnt > 1 {
+					panic(fmt.Sprintf("Still have duplicates after deduplicating %s", k))
+				}
+
+				index.ops[k.OpLocator][k.PathPatternStr] = pickRef
+				delete(dups, k)
+				continue
+			}
+
+			var refStrs []string
+			for _, ref := range refs {
+				refStrs = append(refStrs, ref.String())
+			}
+			logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refStrs)
 		}
 	}
 
@@ -121,11 +194,6 @@ func collectSpecs(rootdir string) ([]string, error) {
 	return speclist, nil
 }
 
-type OpInfo struct {
-	PathPatternStr
-	OperationRefStr
-}
-
 type OperationKind string
 
 const (
@@ -169,114 +237,118 @@ func PathItemOperation(pathItem spec.PathItem, op OperationKind) *spec.Operation
 }
 
 // parseSpec parses one Swagger spec and returns back a per-spec index for it
-func parseSpec(specpath string) (map[OpLocatorFixedRP]OpInfo, map[OpLocatorGlobRP]OpInfo, error) {
+func parseSpec(specpath string) (map[OpLocator]OperationRefs, error) {
 	doc, err := loads.Spec(specpath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("loading spec: %v", err)
+		return nil, fmt.Errorf("loading spec: %v", err)
 	}
 	swagger := doc.Spec()
 
 	// Skipping swagger specs that have no "paths" defined
 	if swagger.Paths == nil || len(swagger.Paths.Paths) == 0 {
-		return nil, nil, nil
+		return nil, nil
 	}
 	if swagger.Info == nil {
-		return nil, nil, fmt.Errorf(`spec has no "Info"`)
+		return nil, fmt.Errorf(`spec has no "Info"`)
 	}
 	if swagger.Info.Version == "" {
-		return nil, nil, fmt.Errorf(`spec has no "Info.Version"`)
+		return nil, fmt.Errorf(`spec has no "Info.Version"`)
 	}
 
 	version := swagger.Info.Version
-	infoMapFixedRP := map[OpLocatorFixedRP]OpInfo{}
-	infoMapGlobRP := map[OpLocatorGlobRP]OpInfo{}
+	infoMap := map[OpLocator]OperationRefs{}
 	for path, pathItem := range swagger.Paths.Paths {
 		for _, opKind := range PossibleOperationKinds {
 			if PathItemOperation(pathItem, opKind) == nil {
 				continue
 			}
 			logger.Debug("Parsing spec", "spec", specpath, "path", path, "operation", opKind)
-			pathPattern, err := ParsePathPatternFromSwagger(specpath, swagger, path, opKind)
+			pathPatterns, err := ParsePathPatternFromSwagger(specpath, swagger, path, opKind)
 			if err != nil {
-				return nil, nil, fmt.Errorf("parsing path pattern for %s (%s): %v", path, opKind, err)
+				return nil, fmt.Errorf("parsing path pattern for %s (%s): %v", path, opKind, err)
 			}
-			// path -> RP, RT, ACT
-			// We look backwards for the first "providers" segment.
-			providerIdx := -1
-			for i := len(pathPattern.Segments) - 1; i >= 0; i-- {
-				if strings.EqualFold(pathPattern.Segments[i].FixedName, "providers") {
-					providerIdx = i
-					break
-				}
-			}
-			var (
-				rp, rt, act string
-				rpIsGlob    bool
-			)
-
-			if providerIdx == -1 {
-				logger.Warn("no provider defined", "spec", specpath, "path", path, "operation", opKind)
-			} else {
-				// RP found, but can be glob
-				providerSeg := pathPattern.Segments[providerIdx+1]
-				rp = providerSeg.FixedName
-				rpIsGlob = providerSeg.IsParameter
-				lastIdx := len(pathPattern.Segments)
-				if len(pathPattern.Segments[providerIdx:])%2 == 1 {
-					seg := pathPattern.Segments[len(pathPattern.Segments)-1]
-					if seg.IsParameter {
-						return nil, nil, fmt.Errorf("action-like segment is parameterized, in %s (%s)", path, opKind)
+			for _, pathPattern := range pathPatterns {
+				// path -> RP, RT, ACT
+				// We look backwards for the first "providers" segment.
+				providerIdx := -1
+				for i := len(pathPattern.Segments) - 1; i >= 0; i-- {
+					if strings.EqualFold(pathPattern.Segments[i].FixedName, "providers") {
+						providerIdx = i
+						break
 					}
-					lastIdx = lastIdx - 1
-					act = seg.FixedName
 				}
-				var rts []string
-				for i := providerIdx + 2; i < lastIdx; i += 2 {
-					seg := pathPattern.Segments[i]
-					if seg.IsParameter {
-						return nil, nil, fmt.Errorf("resource type %dth segment is parameterized, in %s (%s)", i, path, opKind)
+				var (
+					rp, rt, act string
+					rpIsGlob    bool
+				)
+
+				if providerIdx == -1 {
+					// TODO: ignore the too general ones, but keep the implicit RP Microsoft.Resources
+					logger.Warn("no provider defined", "spec", specpath, "path", path, "operation", opKind)
+				} else {
+					// RP found, but can be glob
+					providerSeg := pathPattern.Segments[providerIdx+1]
+					rp = providerSeg.FixedName
+					rpIsGlob = providerSeg.IsParameter
+					lastIdx := len(pathPattern.Segments)
+					if len(pathPattern.Segments[providerIdx:])%2 == 1 {
+						seg := pathPattern.Segments[len(pathPattern.Segments)-1]
+						if seg.IsParameter {
+							// TODO: shall we resolve some of these violations
+							logger.Warn("action-like segment is parameterized", "path", path, "operation", opKind)
+							continue
+							//return nil, nil, fmt.Errorf("action-like segment is parameterized, in %s (%s)", path, opKind)
+						}
+						lastIdx = lastIdx - 1
+						act = seg.FixedName
 					}
-					rts = append(rts, seg.FixedName)
+					var rts []string
+					for i := providerIdx + 2; i < lastIdx; i += 2 {
+						seg := pathPattern.Segments[i]
+						if seg.IsParameter {
+							// TODO: shall we resolve some of these violations
+							logger.Warn("resource type is parameterized", "path", path, "operation", opKind, "index", i)
+							continue
+							//return nil, nil, fmt.Errorf("resource type %dth segment is parameterized, in %s (%s)", i, path, opKind)
+						}
+						rts = append(rts, seg.FixedName)
+					}
+					rt = "/" + strings.Join(rts, "/")
 				}
-				rt = "/" + strings.Join(rts, "/")
-			}
 
-			absSpecPath, err := filepath.Abs(specpath)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to get abs path for %s: %v", specpath, err)
-			}
-			opRefStr := absSpecPath + "#" + jsonpointer.Escape(path) + "/" + strings.ToLower(string(opKind))
-
-			info := OpInfo{
-				PathPatternStr:  PathPatternStr(pathPattern.String()),
-				OperationRefStr: OperationRefStr(opRefStr),
-			}
-
-			opLocGlobRP := OpLocatorGlobRP{
-				Version: version,
-				RT:      strings.ToUpper(rt),
-				ACT:     strings.ToUpper(act),
-				Method:  opKind,
-			}
-
-			if rpIsGlob {
-				if exist, ok := infoMapGlobRP[opLocGlobRP]; ok {
-					return nil, nil, fmt.Errorf("operation locator %#v already applied to %#v, conflicts to the new %#v", opLocGlobRP, exist, info)
+				absSpecPath, err := filepath.Abs(specpath)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get abs path for %s: %v", specpath, err)
 				}
-				infoMapGlobRP[opLocGlobRP] = info
-			} else {
-				opLocFixedRP := OpLocatorFixedRP{
-					RP:              strings.ToUpper(rp),
-					OpLocatorGlobRP: opLocGlobRP,
+
+				opRef := jsonreference.MustCreateRef(absSpecPath + "#" + jsonpointer.Escape(path) + "/" + strings.ToLower(string(opKind)))
+
+				pathPatternStr := PathPatternStr(strings.ToUpper(pathPattern.String()))
+
+				opLoc := OpLocator{
+					RP:      strings.ToUpper(rp),
+					Version: version,
+					RT:      strings.ToUpper(rt),
+					ACT:     strings.ToUpper(act),
+					Method:  opKind,
 				}
-				if exist, ok := infoMapFixedRP[opLocFixedRP]; ok {
-					return nil, nil, fmt.Errorf("operation locator %#v already applied to %#v, conflicts to the new %#v", opLocFixedRP, exist, info)
+
+				if rpIsGlob {
+					opLoc.RP = Wildcard
 				}
-				infoMapFixedRP[opLocFixedRP] = info
+
+				if _, ok := infoMap[opLoc]; !ok {
+					infoMap[opLoc] = map[PathPatternStr]jsonreference.Ref{}
+				}
+				if exist, ok := infoMap[opLoc][pathPatternStr]; ok {
+					return nil, fmt.Errorf(
+						"operation locator %#v for path pattern %s already applied with operation %s, conflicts to the new operation %s", opLoc, pathPatternStr, &exist, &opRef)
+				}
+				infoMap[opLoc][pathPatternStr] = opRef
 			}
 		}
 	}
-	return infoMapFixedRP, infoMapGlobRP, nil
+	return infoMap, nil
 }
 
 func sortedKeys[K ~string, V any](input map[K]V) []K {

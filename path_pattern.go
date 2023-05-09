@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -17,7 +18,7 @@ type PathSegment struct {
 	IsMulti     bool // indicates the x-ms-skip-url-encoding = true
 }
 
-func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path string, operation OperationKind) (*PathPattern, error) {
+func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path string, operation OperationKind) ([]PathPattern, error) {
 	if swagger.Paths == nil {
 		return nil, fmt.Errorf(`no "paths"`)
 	}
@@ -50,7 +51,8 @@ func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path st
 		}
 	}
 
-	var segments []PathSegment
+	// Initialliy, there is only one []PathSegment in the segment set.
+	segmentSet := [][]PathSegment{{}}
 	for _, seg := range strings.Split(strings.TrimLeft(path, "/"), "/") {
 		if isParameterizedSegment(seg) {
 			name := strings.Trim(seg, "{}")
@@ -58,18 +60,47 @@ func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path st
 			if !ok {
 				return nil, fmt.Errorf("undefined parameter name %q", name)
 			}
+
+			// In case this segment is an enum parameter, replicate the existing patterns to time the amount of enum variants with the variant appended.
+			if param.HasEnum() {
+				var newSegmentSet [][]PathSegment
+				for _, enum := range param.Enum {
+					for _, segs := range segmentSet {
+						newSegs := make([]PathSegment, len(segs)+1)
+						copy(newSegs, segs)
+						// enum parameter in path must be of type string
+						newSegs[len(newSegs)-1] = PathSegment{FixedName: enum.(string)}
+						newSegmentSet = append(newSegmentSet, newSegs)
+					}
+				}
+				segmentSet = newSegmentSet
+				continue
+			}
+
+			// Regular parameter
 			segment := PathSegment{
 				IsParameter: true,
 			}
 			if v, ok := param.VendorExtensible.Extensions["x-ms-skip-url-encoding"]; ok && v.(bool) {
 				segment.IsMulti = true
 			}
-			segments = append(segments, segment)
-		} else {
-			segments = append(segments, PathSegment{FixedName: seg})
+			for i := 0; i < len(segmentSet); i++ {
+				segmentSet[i] = append(segmentSet[i], segment)
+			}
+			continue
+		}
+
+		for i := 0; i < len(segmentSet); i++ {
+			segmentSet[i] = append(segmentSet[i], PathSegment{FixedName: seg})
 		}
 	}
-	return &PathPattern{Segments: segments}, nil
+
+	var pathPatterns []PathPattern
+	for _, segs := range segmentSet {
+		pathPatterns = append(pathPatterns, PathPattern{Segments: segs})
+	}
+	sort.Slice(pathPatterns, func(i, j int) bool { return pathPatterns[i].String() < pathPatterns[j].String() })
+	return pathPatterns, nil
 }
 
 func ParsePathPatternFromString(path string) *PathPattern {
