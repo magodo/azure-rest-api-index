@@ -14,6 +14,7 @@ import (
 	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
+	"github.com/magodo/azure-rest-api-index/specpath"
 	"github.com/magodo/workerpool"
 )
 
@@ -71,7 +72,7 @@ func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
 	logger.Info(fmt.Sprintf("%d specs collected", len(l)))
 
 	logger.Info("Building operation index")
-	ops, err := buildOpsIndex(deduplicator, l)
+	ops, err := buildOpsIndex(rootdir, deduplicator, l)
 	if err != nil {
 		return nil, fmt.Errorf("building operation index: %v", err)
 	}
@@ -124,7 +125,11 @@ func collectSpecs(rootdir string) ([]string, error) {
 	return speclist, nil
 }
 
-func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]OperationRefs, error) {
+func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (map[OpLocator]OperationRefs, error) {
+	rootdir, err := filepath.Abs(rootdir)
+	if err != nil {
+		return nil, err
+	}
 	ops := map[OpLocator]OperationRefs{}
 	var lock sync.Mutex
 
@@ -174,7 +179,39 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 		return nil, err
 	}
 
-	// resolving any duplicates
+	// Resolve duplicates (auto)
+	newdups := map[dupkey][]jsonreference.Ref{}
+	for k, refs := range dups {
+		newrefs := make([]jsonreference.Ref, len(refs))
+		copy(newrefs, refs)
+		newdups[k] = newrefs
+	}
+	for k, refs := range dups {
+		var candidateRefs []jsonreference.Ref
+		for _, ref := range refs {
+			p, err := filepath.Rel(rootdir, ref.GetURL().Path)
+			if err != nil {
+				return nil, err
+			}
+			pinfo, err := specpath.SpecPathInfo(p)
+			if err != nil {
+				return nil, fmt.Errorf("new spec path info: %v", err)
+			}
+			// Only pick up the op locator that well matches its spec path, which hopefully is the orignal spec that defines this operation
+			if strings.EqualFold(pinfo.ResourceProviderMS, k.RP) &&
+				strings.EqualFold(pinfo.Version, k.Version) &&
+				pinfo.IsPreview == strings.HasSuffix(k.Version, "preview") {
+				candidateRefs = append(candidateRefs, ref)
+			}
+		}
+		if len(candidateRefs) == 1 {
+			ops[k.OpLocator][k.PathPatternStr] = candidateRefs[0]
+			delete(newdups, k)
+		}
+	}
+	dups = newdups
+
+	// Resolve duplicates (manually)
 	if deduplicator != nil {
 		for k, refs := range dups {
 			var dedupOp *DedupOp
@@ -197,7 +234,9 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 			refMsg := "\n" + strings.Join(refStrs, "\n")
 
 			if dedupOp != nil {
-				if picker := dedupOp.Picker; picker != nil {
+				switch {
+				case dedupOp.Picker != nil:
+					picker := dedupOp.Picker
 					var pickCnt int
 					var pickRef jsonreference.Ref
 					for _, ref := range refs {
@@ -217,14 +256,15 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 						//return nil, fmt.Errorf("still have duplicates after dedup matcher %s picking for %s. refs: %v", matcherName, k, refMsg)
 					}
 					ops[k.OpLocator][k.PathPatternStr] = pickRef
-					continue
-				} else if dedupOp.Ignore {
+				case dedupOp.Any:
+					ops[k.OpLocator][k.PathPatternStr] = refs[0]
+				case dedupOp.Ignore:
 					delete(ops[k.OpLocator], k.PathPatternStr)
 					if len(ops[k.OpLocator]) == 0 {
 						delete(ops, k.OpLocator)
 					}
-					continue
 				}
+				continue
 			}
 
 			logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)

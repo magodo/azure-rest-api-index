@@ -1,13 +1,4 @@
 {
-    "dbformariadb": {
-        "matcher": {
-            "rp": "MICROSOFT.DBFORMARIADB",
-            "version": "2018-06-01"
-        },
-        "picker": {
-            "spec_path": "/stable/2018-06-01"
-        }
-    },
     "aad": {
         "matcher": {
             "rp": "MICROSOFT.AAD"
@@ -43,34 +34,9 @@
             "spec_path": "managedcluster.json"
         }
     },
-    "compute-galleries": {
-        "matcher": {
-            "rp": "MICROSOFT.COMPUTE",
-            "version": "2020-09-30",
-            "paths": [
-                ".*/GALLERIES.*"
-            ]
-        },
-        "picker": {
-            "spec_path": "/stable/2020-09-30/gallery.json"
-        }
-    },
-    "compute-sharedgalleries": {
-        "matcher": {
-            "rp": "MICROSOFT.COMPUTE",
-            "version": "2020-09-30",
-            "paths": [
-                ".*/SHAREDGALLERIES.*"
-            ]
-        },
-        "picker": {
-            "spec_path": "/stable/2020-09-30/sharedGallery.json"
-        }
-    },
     "compute-vmss-nic": {
         "matcher": {
             "rp": "MICROSOFT.COMPUTE",
-            "version": "2018-10-01",
             "paths": [
                 "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/NETWORKINTERFACES",
                 "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES",
@@ -79,35 +45,29 @@
                 "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}"
             ]
         },
-        "picker": {
-            "spec_path": "/stable/2022-09-01/vmssNetworkInterface.json"
-        }
+        "any": true
     },
     "compute-vmss-pip": {
         "matcher": {
             "rp": "MICROSOFT.COMPUTE",
-            "version": "2018-10-01",
             "paths": [
                 "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/PUBLICIPADDRESSES",
                 "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES",
                 "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES/{}"
             ]
         },
-        "picker": {
-            "spec_path": "/stable/2022-09-01/vmssPublicIpAddress.json"
-        }
+        "any": true
     },
     "costmanagement": {
         "matcher": {
             "rp": "MICROSOFT.COSTMANAGEMENT",
-            "version": "2022-10-05-preview",
             "paths": [
                 "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/TAGINHERITANCE",
                 "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS"
             ]
         },
         "picker": {
-            "spec_path": "/preview/2022-10-05-preview/settings.json"
+            "spec_path": "settings.json"
         }
     },
     "signalrservice": {
@@ -127,7 +87,8 @@
         "matcher": {
             "rp": "MICROSOFT.RECOVERYSERVICES",
             "paths": [
-                "/PROVIDERS/MICROSOFT.RECOVERYSERVICES/OPERATIONS"
+                "/PROVIDERS/MICROSOFT.RECOVERYSERVICES/OPERATIONS",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.RECOVERYSERVICES/VAULTS/{}/REGISTEREDIDENTITIES/{}"
             ]
         },
         "picker": {
@@ -142,31 +103,60 @@
             "spec_path": "/solutions/resource-manager/"
         }
     },
-    "solutions": {
+    "containerservice": {
         "matcher": {
-            "rp": "MICROSOFT.NETWORK",
-            "version": "2019-03-01"
+            "rp": "MICROSOFT.CONTAINERSERVICE"
         },
         "picker": {
-            "spec_path": "/stable/2019-03-01"
+            "spec_path": "/aks/"
         }
     },
-    "marchinelearningservices": {
+    "sql1": {
         "matcher": {
-            "rp": "MICROSOFT.MACHINELEARNINGSERVICES",
-            "version": "2020-03-01"
+            "rp": "MICROSOFT.SQL",
+            "paths": [
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/RECOMMENDEDELASTICPOOLS.*"
+            ]
         },
         "picker": {
-            "spec_path": "/stable/2020-03-01"
+            "spec_path": "recommendedElasticPools.json"
         }
     },
-    "media": {
+    "sql2": {
         "matcher": {
-            "rp": "MICROSOFT.MEDIA",
-            "version": "2018-07-01"
+            "rp": "MICROSOFT.SQL",
+            "paths": [
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES.*",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/ELASTICPOOLS.*",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/INACCESSIBLEDATABASES.*"
+            ]
         },
         "picker": {
-            "spec_path": "/stable/2018-07-01"
+            "spec_path": "Databases.json"
+        }
+    },
+    "billing": {
+        "matcher": {
+            "rp": "MICROSOFT.BILLING"
+        },
+        "picker": {
+            "spec_path": "billingV2.json"
+        }
+    },
+    "storage": {
+        "matcher": {
+            "rp": "MICROSOFT.STORAGE"
+        },
+        "picker": {
+            "spec_path": "managementpolicy.json"
+        }
+    },
+    "devices": {
+        "matcher": {
+            "rp": "MICROSOFT.DEVICES"
+        },
+        "picker": {
+            "spec_path": "/iothub/"
         }
     }
 }

@@ -44,6 +44,7 @@ type Deduplicator map[DedupMatcher]DedupOp
 type DedupOp struct {
 	Picker *DedupPicker
 	Ignore bool
+	Any    bool
 }
 
 type DeduplicateRecords map[string]DedupRecord
@@ -52,6 +53,7 @@ type DedupRecord struct {
 	Matcher DedupMatcherIn `json:"matcher"`
 	Picker  *DedupPickerIn `json:"picker"`
 	Ignore  *bool          `json:"ignore"`
+	Any     *bool          `json:"any"`
 }
 
 type DedupMatcherIn struct {
@@ -96,14 +98,24 @@ func (records DeduplicateRecords) ToDeduplicator() (Deduplicator, error) {
 			m.PathPattern = regexp.MustCompile(strings.Join(pstrs, "|"))
 		}
 		op := DedupOp{}
-		if rec.Ignore == nil && rec.Picker == nil {
-			return nil, fmt.Errorf("at least one of `ignore` and `picker` has to be specified")
+		var n int
+		if rec.Picker != nil {
+			n++
 		}
-		if rec.Picker != nil && rec.Ignore != nil && *rec.Ignore {
-			return nil, fmt.Errorf("can't specify both `ignore: true` and `picker`")
+		if rec.Ignore != nil && *rec.Ignore {
+			n++
+		}
+		if rec.Any != nil && *rec.Any {
+			n++
+		}
+		if n != 1 {
+			return nil, fmt.Errorf("exactly one of `ignore`, `any` and `picker` has to be specified")
 		}
 		if rec.Ignore != nil {
 			op.Ignore = *rec.Ignore
+		}
+		if rec.Any != nil {
+			op.Any = *rec.Any
 		}
 		if rec.Picker != nil {
 			picker := rec.Picker
