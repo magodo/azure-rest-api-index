@@ -1,18 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/go-openapi/jsonreference"
 )
 
 type DedupMatcher struct {
-	RP             *regexp.Regexp
-	Version        *regexp.Regexp
-	RT             *regexp.Regexp
-	ACT            *regexp.Regexp
-	Method         *regexp.Regexp
-	PathPatternStr *regexp.Regexp
+	RP          *regexp.Regexp
+	Version     *regexp.Regexp
+	RT          *regexp.Regexp
+	ACT         *regexp.Regexp
+	Method      *regexp.Regexp
+	PathPattern *regexp.Regexp
 }
 
 func (key DedupMatcher) Match(loc OpLocator, pathp string) bool {
@@ -21,7 +23,7 @@ func (key DedupMatcher) Match(loc OpLocator, pathp string) bool {
 		(key.RT == nil || key.RT.MatchString(loc.RT)) &&
 		(key.ACT == nil || key.ACT.MatchString(loc.ACT)) &&
 		(key.Method == nil || key.Method.MatchString(string(loc.Method))) &&
-		(key.PathPatternStr == nil || key.PathPatternStr.MatchString(pathp))
+		(key.PathPattern == nil || key.PathPattern.MatchString(pathp))
 }
 
 type DedupPicker struct {
@@ -36,22 +38,28 @@ func (picker DedupPicker) Match(ref jsonreference.Ref) bool {
 		(picker.Pointer == nil || picker.Pointer.MatchString(pointer))
 }
 
-type Deduplicator map[DedupMatcher]DedupPicker
+type Deduplicator map[DedupMatcher]DedupOp
+
+type DedupOp struct {
+	Picker *DedupPicker
+	Ignore bool
+}
 
 type DeduplicateRecords []DedupRecord
 
 type DedupRecord struct {
 	Matcher DedupMatcherIn `json:"matcher"`
-	Picker  DedupPickerIn  `json:"picker"`
+	Picker  *DedupPickerIn `json:"picker"`
+	Ignore  *bool          `json:"ignore"`
 }
 
 type DedupMatcherIn struct {
-	RP             string `json:"rp,omitempty"`
-	Version        string `json:"versio,omitemptyn"`
-	RT             string `json:"rt,omitempty"`
-	ACT            string `json:"act,omitempty"`
-	Method         string `json:"method,omitempty"`
-	PathPatternStr string `json:"path_pattern_str,omitempty"`
+	RP      string   `json:"rp,omitempty"`
+	Version string   `json:"versio,omitemptyn"`
+	RT      string   `json:"rt,omitempty"`
+	ACT     string   `json:"act,omitempty"`
+	Method  string   `json:"method,omitempty"`
+	Paths   []string `json:"paths,omitempty"`
 }
 
 type DedupPickerIn struct {
@@ -59,10 +67,10 @@ type DedupPickerIn struct {
 	Pointer  string `json:"pointer,omitempty"`
 }
 
-func (records DeduplicateRecords) ToDeduplicator() Deduplicator {
+func (records DeduplicateRecords) ToDeduplicator() (Deduplicator, error) {
 	dup := Deduplicator{}
 	for _, rec := range records {
-		matcher, picker := rec.Matcher, rec.Picker
+		matcher := rec.Matcher
 		m := DedupMatcher{}
 		if matcher.RP != "" {
 			m.RP = regexp.MustCompile(matcher.RP)
@@ -79,17 +87,35 @@ func (records DeduplicateRecords) ToDeduplicator() Deduplicator {
 		if matcher.Method != "" {
 			m.Method = regexp.MustCompile(matcher.Method)
 		}
-		if matcher.PathPatternStr != "" {
-			m.Method = regexp.MustCompile(matcher.PathPatternStr)
+		if len(matcher.Paths) != 0 {
+			var pstrs []string
+			for _, p := range matcher.Paths {
+				pstrs = append(pstrs, "^"+p+"$")
+			}
+			m.PathPattern = regexp.MustCompile(strings.Join(pstrs, "|"))
 		}
-		p := DedupPicker{}
-		if picker.SpecPath != "" {
-			p.SpecPath = regexp.MustCompile(picker.SpecPath)
+		op := DedupOp{}
+		if rec.Ignore == nil && rec.Picker == nil {
+			return nil, fmt.Errorf("at least one of `ignore` and `picker` has to be specified")
 		}
-		if picker.Pointer != "" {
-			p.Pointer = regexp.MustCompile(picker.Pointer)
+		if rec.Picker != nil && rec.Ignore != nil && *rec.Ignore {
+			return nil, fmt.Errorf("can't specify both `ignore: true` and `picker`")
 		}
-		dup[m] = p
+		if rec.Ignore != nil {
+			op.Ignore = *rec.Ignore
+		}
+		if rec.Picker != nil {
+			picker := rec.Picker
+			p := DedupPicker{}
+			if picker.SpecPath != "" {
+				p.SpecPath = regexp.MustCompile(picker.SpecPath)
+			}
+			if picker.Pointer != "" {
+				p.Pointer = regexp.MustCompile(picker.Pointer)
+			}
+			op.Picker = &p
+		}
+		dup[m] = op
 	}
-	return dup
+	return dup, nil
 }

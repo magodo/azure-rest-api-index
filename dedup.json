@@ -3,10 +3,91 @@
         "matcher": {
             "rp": "MICROSOFT.COMPUTE",
             "version": "2020-09-30",
-            "rt": "/GALLERIES"
+            "paths": [
+                ".*/GALLERIES.*"
+            ]
         },
         "picker": {
             "spec_path": "/stable/2020-09-30/gallery.json"
+        }
+    },
+    {
+        "matcher": {
+            "rp": "MICROSOFT.COMPUTE",
+            "version": "2020-09-30",
+            "paths": [
+                ".*/SHAREDGALLERIES.*"
+            ]
+        },
+        "picker": {
+            "spec_path": "/stable/2020-09-30/sharedGallery.json"
+        }
+    },
+    {
+        "matcher": {
+            "rp": "MICROSOFT.COMPUTE",
+            "version": "2018-10-01",
+            "paths": [
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/NETWORKINTERFACES",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}"
+            ]
+        },
+        "picker": {
+            "spec_path": "/stable/2022-09-01/vmssNetworkInterface.json"
+        }
+    },
+    {
+        "matcher": {
+            "rp": "MICROSOFT.COMPUTE",
+            "version": "2018-10-01",
+            "paths": [
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/PUBLICIPADDRESSES",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES",
+                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES/{}"
+            ]
+        },
+        "picker": {
+            "spec_path": "/stable/2022-09-01/vmssPublicIpAddress.json"
+        }
+    },
+    {
+        "matcher": {
+            "rp": "MICROSOFT.COSTMANAGEMENT",
+            "version": "2022-10-05-preview",
+            "paths": [
+                "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/TAGINHERITANCE",
+                "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS"
+            ]
+        },
+        "picker": {
+            "spec_path": "/preview/2022-10-05-preview/settings.json"
+        }
+    },
+    {
+        "matcher": {
+            "rp": "MICROSOFT.SIGNALRSERVICE",
+            "paths": [
+                "/PROVIDERS/MICROSOFT.SIGNALRSERVICE/OPERATIONS",
+                "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.SIGNALRSERVICE/LOCATIONS/{}/USAGES",
+                "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.SIGNALRSERVICE/LOCATIONS/{}/CHECKNAMEAVAILABILITY"
+            ]
+        },
+        "picker": {
+            "spec_path": "/signalr/resource-manager/Microsoft.SignalRService"
+        }
+    },
+    {
+        "matcher": {
+            "rp": "MICROSOFT.RECOVERYSERVICES",
+            "paths": [
+                "/PROVIDERS/MICROSOFT.RECOVERYSERVICES/OPERATIONS"
+            ]
+        },
+        "picker": {
+            "spec_path": "/recoveryservices/resource-manager/Microsoft.RecoveryServices"
         }
     }
 ]
