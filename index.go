@@ -44,13 +44,7 @@ type OperationRefs map[PathPatternStr]jsonreference.Ref
 type PathPatternStr string
 
 func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
-	index := &Index{
-		rootdir: rootdir,
-		ops:     map[OpLocator]OperationRefs{},
-	}
-
 	var deduplicator Deduplicator
-
 	if dedupFile != "" {
 		b, err := os.ReadFile(dedupFile)
 		if err != nil {
@@ -73,92 +67,15 @@ func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
 	}
 	logger.Info(fmt.Sprintf("%d specs collected", len(l)))
 
-	logger.Info("Parsing specs")
-
-	type dupkey struct {
-		OpLocator
-		PathPatternStr
+	logger.Info("Building operation index")
+	ops, err := buildOpsIndex(deduplicator, l)
+	if err != nil {
+		return nil, fmt.Errorf("building operation index: %v", err)
 	}
 
-	dups := map[dupkey][]jsonreference.Ref{}
-
-	for _, spec := range l {
-		m, err := parseSpec(spec)
-		if err != nil {
-			return nil, fmt.Errorf("parsing spec %s: %v", spec, err)
-		}
-		for k, mm := range m {
-			if len(index.ops[k]) == 0 {
-				index.ops[k] = OperationRefs{}
-			}
-			for ppattern, ref := range mm {
-				if exist, ok := index.ops[k][ppattern]; ok {
-					// Temporarily record duplicate operation definitions and resolve it later
-					k := dupkey{
-						OpLocator:      k,
-						PathPatternStr: ppattern,
-					}
-					if len(dups[k]) == 0 {
-						dups[k] = append(dups[k], exist)
-					}
-					dups[k] = append(dups[k], ref)
-					continue
-				}
-				index.ops[k][ppattern] = ref
-			}
-		}
-	}
-
-	// resolving any duplicates
-	if deduplicator != nil {
-		for k, refs := range dups {
-			var dedupOp *DedupOp
-			for matcher, op := range deduplicator {
-				op := op
-				if matcher.Match(k.OpLocator, string(k.PathPatternStr)) {
-					if dedupOp != nil {
-						panic(fmt.Sprintf("Duplicate matchers in duplicator that match %s", k))
-					}
-					dedupOp = &op
-				}
-			}
-
-			var refStrs []string
-			for _, ref := range refs {
-				refStrs = append(refStrs, ref.String())
-			}
-
-			if dedupOp != nil {
-				if picker := dedupOp.Picker; picker != nil {
-					var pickCnt int
-					var pickRef jsonreference.Ref
-					for _, ref := range refs {
-						if picker.Match(ref) {
-							pickCnt++
-							pickRef = ref
-						}
-					}
-
-					if pickCnt == 0 {
-						panic(fmt.Sprintf("Nothing get deduplicated for %s. refs: %v", k, refStrs))
-					}
-
-					if pickCnt > 1 {
-						panic(fmt.Sprintf("Still have duplicates after deduplicating %s. refs: %v", k, refStrs))
-					}
-					index.ops[k.OpLocator][k.PathPatternStr] = pickRef
-					continue
-				} else if dedupOp.Ignore {
-					delete(index.ops[k.OpLocator], k.PathPatternStr)
-					if len(index.ops[k.OpLocator]) == 0 {
-						delete(index.ops, k.OpLocator)
-					}
-					continue
-				}
-			}
-
-			logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refStrs)
-		}
+	index := &Index{
+		rootdir: rootdir,
+		ops:     ops,
 	}
 
 	return index, nil
@@ -202,6 +119,96 @@ func collectSpecs(rootdir string) ([]string, error) {
 	}
 	sort.Slice(speclist, func(i, j int) bool { return speclist[i] < speclist[j] })
 	return speclist, nil
+}
+
+func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]OperationRefs, error) {
+	ops := map[OpLocator]OperationRefs{}
+
+	type dupkey struct {
+		OpLocator
+		PathPatternStr
+	}
+	dups := map[dupkey][]jsonreference.Ref{}
+	for _, spec := range specs {
+		m, err := parseSpec(spec)
+		if err != nil {
+			return nil, fmt.Errorf("parsing spec %s: %v", spec, err)
+		}
+		for k, mm := range m {
+			if len(ops[k]) == 0 {
+				ops[k] = OperationRefs{}
+			}
+			for ppattern, ref := range mm {
+				if exist, ok := ops[k][ppattern]; ok {
+					// Temporarily record duplicate operation definitions and resolve it later
+					k := dupkey{
+						OpLocator:      k,
+						PathPatternStr: ppattern,
+					}
+					if len(dups[k]) == 0 {
+						dups[k] = append(dups[k], exist)
+					}
+					dups[k] = append(dups[k], ref)
+					continue
+				}
+				ops[k][ppattern] = ref
+			}
+		}
+	}
+
+	// resolving any duplicates
+	if deduplicator != nil {
+		for k, refs := range dups {
+			var dedupOp *DedupOp
+			for matcher, op := range deduplicator {
+				op := op
+				if matcher.Match(k.OpLocator, string(k.PathPatternStr)) {
+					if dedupOp != nil {
+						return nil, fmt.Errorf("Duplicate matchers in duplicator that match %s", k)
+					}
+					dedupOp = &op
+				}
+			}
+
+			var refStrs []string
+			for _, ref := range refs {
+				refStrs = append(refStrs, ref.String())
+			}
+
+			if dedupOp != nil {
+				if picker := dedupOp.Picker; picker != nil {
+					var pickCnt int
+					var pickRef jsonreference.Ref
+					for _, ref := range refs {
+						if picker.Match(ref) {
+							pickCnt++
+							pickRef = ref
+						}
+					}
+
+					if pickCnt == 0 {
+						return nil, fmt.Errorf("Nothing get deduplicated for %s. refs: %v", k, refStrs)
+					}
+
+					if pickCnt > 1 {
+						return nil, fmt.Errorf("Still have duplicates after deduplicating %s. refs: %v", k, refStrs)
+					}
+					ops[k.OpLocator][k.PathPatternStr] = pickRef
+					continue
+				} else if dedupOp.Ignore {
+					delete(ops[k.OpLocator], k.PathPatternStr)
+					if len(ops[k.OpLocator]) == 0 {
+						delete(ops, k.OpLocator)
+					}
+					continue
+				}
+			}
+
+			logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refStrs)
+		}
+	}
+
+	return ops, nil
 }
 
 type OperationKind string
