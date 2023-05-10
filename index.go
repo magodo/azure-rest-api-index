@@ -302,36 +302,45 @@ func parseSpec(specpath string) (map[OpLocator]OperationRefs, error) {
 				if providerIdx == -1 {
 					// TODO: ignore the too general ones, but keep the implicit RP Microsoft.Resources
 					logger.Warn("no provider defined", "spec", specpath, "path", path, "operation", opKind)
-				} else {
-					// RP found, but can be glob
-					providerSeg := pathPattern.Segments[providerIdx+1]
-					rp = providerSeg.FixedName
-					rpIsGlob = providerSeg.IsParameter
-					lastIdx := len(pathPattern.Segments)
-					if len(pathPattern.Segments[providerIdx:])%2 == 1 {
-						seg := pathPattern.Segments[len(pathPattern.Segments)-1]
-						if seg.IsParameter {
-							// TODO: shall we resolve some of these violations
-							logger.Warn("action-like segment is parameterized", "path", path, "operation", opKind)
-							continue
-							//return nil, nil, fmt.Errorf("action-like segment is parameterized, in %s (%s)", path, opKind)
-						}
-						lastIdx = lastIdx - 1
-						act = seg.FixedName
-					}
-					var rts []string
-					for i := providerIdx + 2; i < lastIdx; i += 2 {
-						seg := pathPattern.Segments[i]
-						if seg.IsParameter {
-							// TODO: shall we resolve some of these violations
-							logger.Warn("resource type is parameterized", "path", path, "operation", opKind, "index", i)
-							continue
-							//return nil, nil, fmt.Errorf("resource type %dth segment is parameterized, in %s (%s)", i, path, opKind)
-						}
-						rts = append(rts, seg.FixedName)
-					}
-					rt = "/" + strings.Join(rts, "/")
+					continue
 				}
+
+				// "providers" segment found
+
+				// This can still be an ACT
+				if len(pathPattern.Segments) == providerIdx+1 {
+					// TODO: ignore the too general ones, but keep the implicit RP Microsoft.Resources
+					logger.Warn("no provider defined", "spec", specpath, "path", path, "operation", opKind, "act", "providers")
+					continue
+				}
+
+				providerSeg := pathPattern.Segments[providerIdx+1]
+				rp = providerSeg.FixedName
+				rpIsGlob = providerSeg.IsParameter
+				lastIdx := len(pathPattern.Segments)
+				if len(pathPattern.Segments[providerIdx:])%2 == 1 {
+					seg := pathPattern.Segments[len(pathPattern.Segments)-1]
+					if seg.IsParameter {
+						// TODO: shall we resolve some of these violations
+						logger.Warn("action-like segment is parameterized", "path", path, "operation", opKind)
+						continue
+						//return nil, nil, fmt.Errorf("action-like segment is parameterized, in %s (%s)", path, opKind)
+					}
+					lastIdx = lastIdx - 1
+					act = seg.FixedName
+				}
+				var rts []string
+				for i := providerIdx + 2; i < lastIdx; i += 2 {
+					seg := pathPattern.Segments[i]
+					if seg.IsParameter {
+						// TODO: shall we resolve some of these violations
+						logger.Warn("resource type is parameterized", "path", path, "operation", opKind, "index", i)
+						continue
+						//return nil, nil, fmt.Errorf("resource type %dth segment is parameterized, in %s (%s)", i, path, opKind)
+					}
+					rts = append(rts, seg.FixedName)
+				}
+				rt = "/" + strings.Join(rts, "/")
 
 				absSpecPath, err := filepath.Abs(specpath)
 				if err != nil {

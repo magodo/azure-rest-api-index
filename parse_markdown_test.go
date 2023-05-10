@@ -45,6 +45,7 @@ These settings apply only when %[1]s--tag=package-2021-08%[1]s is specified on t
 input-file:
   - e.json
   - c.json
+  - foo/$(this-folder)/z.json
 %[1]s%[1]s%[1]s
 `, "`")
 	speclist, err := SpecListFromReadmeMD([]byte(input))
@@ -55,6 +56,7 @@ input-file:
 		"c.json",
 		"d.json",
 		"e.json",
+		"foo/z.json",
 		"x.json",
 	}, speclist)
 }

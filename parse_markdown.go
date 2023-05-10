@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -33,6 +34,7 @@ func SpecListFromReadmeMD(b []byte) ([]string, error) {
 				return nil, fmt.Errorf("decoding yaml %q: %v", ymlContent, err)
 			}
 			for _, p := range info.InputFile {
+				p = filepath.Clean(strings.Replace(p, "$(this-folder)", ".", -1))
 				specSet[p] = struct{}{}
 			}
 			// rest the states
