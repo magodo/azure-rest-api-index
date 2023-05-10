@@ -178,13 +178,15 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 	if deduplicator != nil {
 		for k, refs := range dups {
 			var dedupOp *DedupOp
+			var matcherName string
 			for matcher, op := range deduplicator {
 				op := op
 				if matcher.Match(k.OpLocator, string(k.PathPatternStr)) {
 					if dedupOp != nil {
-						return nil, fmt.Errorf("Duplicate matchers in duplicator that match %s", k)
+						return nil, fmt.Errorf("Duplicate matchers in duplicator that match %s: %s vs %s", k, matcherName, matcher.Name)
 					}
 					dedupOp = &op
+					matcherName = matcher.Name
 				}
 			}
 
@@ -205,14 +207,14 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 						}
 					}
 					if pickCnt == 0 {
-						logger.Warn("dedup picker picked nothing", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)
+						logger.Warn("dedup matcher picked nothing", "oploc", k.OpLocator, "path", k.PathPatternStr, "matcher", matcherName, "refs", refMsg)
 						continue
-						//return nil, fmt.Errorf("dedup picker picked nothing for %s. refs: %v", k, refMsg)
+						//return nil, fmt.Errorf("dedup matcher %s picked nothing for %s. refs: %v", matcherName, k, refMsg)
 					}
 					if pickCnt > 1 {
-						logger.Warn("still have duplicates after dedup picking", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)
+						logger.Warn("still have duplicates after dedup picking", "oploc", k.OpLocator, "path", k.PathPatternStr, "matcher", matcherName, "refs", refMsg)
 						continue
-						//return nil, fmt.Errorf("still have duplicates after dedup picking for %s. refs: %v", k, refMsg)
+						//return nil, fmt.Errorf("still have duplicates after dedup matcher %s picking for %s. refs: %v", matcherName, k, refMsg)
 					}
 					ops[k.OpLocator][k.PathPatternStr] = pickRef
 					continue

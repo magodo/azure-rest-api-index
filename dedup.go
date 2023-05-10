@@ -9,6 +9,7 @@ import (
 )
 
 type DedupMatcher struct {
+	Name        string
 	RP          *regexp.Regexp
 	Version     *regexp.Regexp
 	RT          *regexp.Regexp
@@ -45,7 +46,7 @@ type DedupOp struct {
 	Ignore bool
 }
 
-type DeduplicateRecords []DedupRecord
+type DeduplicateRecords map[string]DedupRecord
 
 type DedupRecord struct {
 	Matcher DedupMatcherIn `json:"matcher"`
@@ -55,7 +56,7 @@ type DedupRecord struct {
 
 type DedupMatcherIn struct {
 	RP      string   `json:"rp,omitempty"`
-	Version string   `json:"versio,omitemptyn"`
+	Version string   `json:"version,omitemptyn"`
 	RT      string   `json:"rt,omitempty"`
 	ACT     string   `json:"act,omitempty"`
 	Method  string   `json:"method,omitempty"`
@@ -69,9 +70,9 @@ type DedupPickerIn struct {
 
 func (records DeduplicateRecords) ToDeduplicator() (Deduplicator, error) {
 	dup := Deduplicator{}
-	for _, rec := range records {
+	for name, rec := range records {
 		matcher := rec.Matcher
-		m := DedupMatcher{}
+		m := DedupMatcher{Name: name}
 		if matcher.RP != "" {
 			m.RP = regexp.MustCompile(matcher.RP)
 		}
