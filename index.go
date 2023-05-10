@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/go-openapi/jsonpointer"
 	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
+	"github.com/magodo/workerpool"
 )
 
 type Index struct {
@@ -123,37 +126,52 @@ func collectSpecs(rootdir string) ([]string, error) {
 
 func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]OperationRefs, error) {
 	ops := map[OpLocator]OperationRefs{}
+	var lock sync.Mutex
 
 	type dupkey struct {
 		OpLocator
 		PathPatternStr
 	}
 	dups := map[dupkey][]jsonreference.Ref{}
+
+	wp := workerpool.NewWorkPool(runtime.NumCPU())
+	wp.Run(nil)
 	for _, spec := range specs {
-		m, err := parseSpec(spec)
-		if err != nil {
-			return nil, fmt.Errorf("parsing spec %s: %v", spec, err)
-		}
-		for k, mm := range m {
-			if len(ops[k]) == 0 {
-				ops[k] = OperationRefs{}
+		spec := spec
+		wp.AddTask(func() (interface{}, error) {
+			m, err := parseSpec(spec)
+			if err != nil {
+				return nil, fmt.Errorf("parsing spec %s: %v", spec, err)
 			}
-			for ppattern, ref := range mm {
-				if exist, ok := ops[k][ppattern]; ok {
-					// Temporarily record duplicate operation definitions and resolve it later
-					k := dupkey{
-						OpLocator:      k,
-						PathPatternStr: ppattern,
-					}
-					if len(dups[k]) == 0 {
-						dups[k] = append(dups[k], exist)
-					}
-					dups[k] = append(dups[k], ref)
-					continue
+
+			lock.Lock()
+			defer lock.Unlock()
+
+			for k, mm := range m {
+				if len(ops[k]) == 0 {
+					ops[k] = OperationRefs{}
 				}
-				ops[k][ppattern] = ref
+				for ppattern, ref := range mm {
+					if exist, ok := ops[k][ppattern]; ok {
+						// Temporarily record duplicate operation definitions and resolve it later
+						k := dupkey{
+							OpLocator:      k,
+							PathPatternStr: ppattern,
+						}
+						if len(dups[k]) == 0 {
+							dups[k] = append(dups[k], exist)
+						}
+						dups[k] = append(dups[k], ref)
+						continue
+					}
+					ops[k][ppattern] = ref
+				}
 			}
-		}
+			return nil, nil
+		})
+	}
+	if err := wp.Done(); err != nil {
+		return nil, err
 	}
 
 	// resolving any duplicates
@@ -174,6 +192,7 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 			for _, ref := range refs {
 				refStrs = append(refStrs, ref.String())
 			}
+			refMsg := "\n" + strings.Join(refStrs, "\n")
 
 			if dedupOp != nil {
 				if picker := dedupOp.Picker; picker != nil {
@@ -185,13 +204,15 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 							pickRef = ref
 						}
 					}
-
 					if pickCnt == 0 {
-						return nil, fmt.Errorf("Nothing get deduplicated for %s. refs: %v", k, refStrs)
+						logger.Warn("dedup picker picked nothing", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)
+						continue
+						//return nil, fmt.Errorf("dedup picker picked nothing for %s. refs: %v", k, refMsg)
 					}
-
 					if pickCnt > 1 {
-						return nil, fmt.Errorf("Still have duplicates after deduplicating %s. refs: %v", k, refStrs)
+						logger.Warn("still have duplicates after dedup picking", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)
+						continue
+						//return nil, fmt.Errorf("still have duplicates after dedup picking for %s. refs: %v", k, refMsg)
 					}
 					ops[k.OpLocator][k.PathPatternStr] = pickRef
 					continue
@@ -204,7 +225,7 @@ func buildOpsIndex(deduplicator Deduplicator, specs []string) (map[OpLocator]Ope
 				}
 			}
 
-			logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refStrs)
+			logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)
 		}
 	}
 
