@@ -41,7 +41,7 @@ input-file:
 
 These settings apply only when %[1]s--tag=package-2021-08%[1]s is specified on the command line.
 
-%[1]s%[1]s%[1]syaml $(tag) == 'package-2021-08'
+%[1]s%[1]s%[1]s yaml $(tag) == 'package-2021-08'
 input-file:
   - e.json
   - c.json

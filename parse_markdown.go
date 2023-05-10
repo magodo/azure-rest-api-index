@@ -22,7 +22,8 @@ func SpecListFromReadmeMD(b []byte) ([]string, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		trimmedLine := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmedLine, "```yaml $(tag) ==") {
+		// Some starting line has empty space between "```" and "yaml $(tag)"
+		if strings.HasPrefix(trimmedLine, "```") && strings.HasPrefix(strings.TrimSpace(strings.TrimPrefix(trimmedLine, "```")), "yaml $(tag)") {
 			isEnter = true
 			continue
 		}
