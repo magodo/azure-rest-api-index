@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/magodo/azure-rest-api-index/tests"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +20,7 @@ func TestSPecPathInfo(t *testing.T) {
 	}{
 		{
 			name: "regular stable spec file",
-			path: "compute/resource-manager/Microsoft.Compute/stable/2020-01-01/compute.json",
+			path: "/compute/resource-manager/Microsoft.Compute/stable/2020-01-01/compute.json",
 			pathInfo: &Info{
 				ResourceProvider:   "compute",
 				ResourceProviderMS: "Microsoft.Compute",
@@ -30,7 +31,7 @@ func TestSPecPathInfo(t *testing.T) {
 		},
 		{
 			name: "regular preview spec file",
-			path: "./compute/resource-manager/Microsoft.Compute/preview/2020-01-01-preview/compute.json",
+			path: "/compute/resource-manager/Microsoft.Compute/preview/2020-01-01-preview/compute.json",
 			pathInfo: &Info{
 				ResourceProvider:   "compute",
 				ResourceProviderMS: "Microsoft.Compute",
@@ -41,7 +42,7 @@ func TestSPecPathInfo(t *testing.T) {
 		},
 		{
 			name: "regular stable spec file with sub service",
-			path: "mediaservices/resource-manager/Microsoft.Media/Accounts/preview/2019-05-01-preview/Accounts.json",
+			path: "/mediaservices/resource-manager/Microsoft.Media/Accounts/preview/2019-05-01-preview/Accounts.json",
 			pathInfo: &Info{
 				ResourceProvider:   "mediaservices",
 				ResourceProviderMS: "Microsoft.Media",
@@ -52,25 +53,25 @@ func TestSPecPathInfo(t *testing.T) {
 			},
 		},
 		{
-			name:     "regular stable spec file, abs path",
-			path:     "/compute/resource-manager/Microsoft.Compute/stable/2020-01-01/compute.json",
+			name:     "regular stable spec file, wrong rootdir",
+			path:     "/some/root/dir/compute/resource-manager/Microsoft.Compute/stable/2020-01-01/compute.json",
 			hasError: true,
 		},
 		{
 			name:     "spec not ends with .json",
-			path:     "compute/resource-manager/Microsoft.Compute/preview/2020-01-01-preview/compute",
+			path:     "/compute/resource-manager/Microsoft.Compute/preview/2020-01-01-preview/compute",
 			hasError: true,
 		},
 		{
 			name:     "path has wrong segment count",
-			path:     "compute/resource-manager/Microsoft.Compute/2020-01-01-preview/compute",
+			path:     "/compute/resource-manager/Microsoft.Compute/2020-01-01-preview/compute",
 			hasError: true,
 		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			info, err := SpecPathInfo(tt.path)
+			info, err := SpecPathInfo("/", tt.path)
 			if tt.hasError {
 				require.Error(t, err)
 				return
@@ -141,10 +142,6 @@ func Test_E2E_SpecPathInfo(t *testing.T) {
 			if info == nil {
 				return nil
 			}
-			relPath, err := filepath.Rel(specRootDir, p)
-			if err != nil {
-				return err
-			}
 			if info.IsDir() {
 				if strings.EqualFold(filepath.Base(p), "data-plane") {
 					return filepath.SkipDir
@@ -156,9 +153,9 @@ func Test_E2E_SpecPathInfo(t *testing.T) {
 			}
 
 			// Skip files not match the schema file patterns
-			if _, err := SpecPathInfo(relPath); err != nil {
-				if filepath.Ext(relPath) == ".json" {
-					t.Logf("%s: %v", relPath, err)
+			if _, err := SpecPathInfo(specRootDir, p); err != nil {
+				if filepath.Ext(p) == ".json" {
+					t.Logf("%s: %v", p, err)
 				}
 				return nil
 			}

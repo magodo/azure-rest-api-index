@@ -25,6 +25,8 @@ type Index struct {
 
 const Wildcard = "*"
 
+const ResourceRP = "Microsoft.Resources"
+
 type OpLocator struct {
 	// Upper cased RP name, e.g. MICROSOFT.COMPUTE. This might be "" for API path that has no explicit RP defined (e.g. /subscriptions/{subscriptionId})
 	// This can be "*" to indicate it maps any RP
@@ -32,8 +34,10 @@ type OpLocator struct {
 	// API version, e.g. 2020-10-01-preview
 	Version string
 	// Upper cased resource type, e.g. /VIRTUALNETWORKS/SUBNETS
+	// Each subtype can be "*" to indicate it maps any sub type.
 	RT string
 	// Upper cased potential action/collection type, e.g. LISTKEYS (action), SUBNETS
+	// This can be "*" to indicate it maps any RP
 	ACT string
 	// HTTP operation kind, e.g. GET
 	Method OperationKind
@@ -144,7 +148,7 @@ func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (m
 	for _, spec := range specs {
 		spec := spec
 		wp.AddTask(func() (interface{}, error) {
-			m, err := parseSpec(spec)
+			m, err := parseSpec(rootdir, spec)
 			if err != nil {
 				return nil, fmt.Errorf("parsing spec %s: %v", spec, err)
 			}
@@ -189,11 +193,7 @@ func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (m
 	for k, refs := range dups {
 		var candidateRefs []jsonreference.Ref
 		for _, ref := range refs {
-			p, err := filepath.Rel(rootdir, ref.GetURL().Path)
-			if err != nil {
-				return nil, err
-			}
-			pinfo, err := specpath.SpecPathInfo(p)
+			pinfo, err := specpath.SpecPathInfo(rootdir, ref.GetURL().Path)
 			if err != nil {
 				return nil, fmt.Errorf("new spec path info: %v", err)
 			}
@@ -316,9 +316,9 @@ func PathItemOperation(pathItem spec.PathItem, op OperationKind) *spec.Operation
 	return nil
 }
 
-// parseSpec parses one Swagger spec and returns back a per-spec index for it
-func parseSpec(specpath string) (map[OpLocator]OperationRefs, error) {
-	doc, err := loads.Spec(specpath)
+// parseSpec parses one Swagger spec and returns back a operation index for this spec
+func parseSpec(rootdir, p string) (map[OpLocator]OperationRefs, error) {
+	doc, err := loads.Spec(p)
 	if err != nil {
 		return nil, fmt.Errorf("loading spec: %v", err)
 	}
@@ -335,6 +335,11 @@ func parseSpec(specpath string) (map[OpLocator]OperationRefs, error) {
 		return nil, fmt.Errorf(`spec has no "Info.Version"`)
 	}
 
+	pinfo, err := specpath.SpecPathInfo(rootdir, p)
+	if err != nil {
+		return nil, fmt.Errorf("new spec path info: %v", err)
+	}
+
 	version := swagger.Info.Version
 	infoMap := map[OpLocator]OperationRefs{}
 	for path, pathItem := range swagger.Paths.Paths {
@@ -342,8 +347,8 @@ func parseSpec(specpath string) (map[OpLocator]OperationRefs, error) {
 			if PathItemOperation(pathItem, opKind) == nil {
 				continue
 			}
-			logger.Debug("Parsing spec", "spec", specpath, "path", path, "operation", opKind)
-			pathPatterns, err := ParsePathPatternFromSwagger(specpath, swagger, path, opKind)
+			logger.Debug("Parsing spec", "spec", p, "path", path, "operation", opKind)
+			pathPatterns, err := ParsePathPatternFromSwagger(p, swagger, path, opKind)
 			if err != nil {
 				return nil, fmt.Errorf("parsing path pattern for %s (%s): %v", path, opKind, err)
 			}
@@ -360,54 +365,72 @@ func parseSpec(specpath string) (map[OpLocator]OperationRefs, error) {
 				var (
 					rp, rt, act string
 					rpIsGlob    bool
+					nextIdx     int
 				)
 
-				if providerIdx == -1 {
-					// TODO: ignore the too general ones, but keep the implicit RP Microsoft.Resources
-					logger.Warn("no provider defined", "spec", specpath, "path", path, "operation", opKind)
+				if providerIdx == -1 || len(pathPattern.Segments) == providerIdx+1 {
+					// No "providers" segment found, if the spec is from Resources RP, then add up the implicit RP "Microsoft.Resources"
+					if !strings.EqualFold(pinfo.ResourceProviderMS, "Microsoft.Resources") {
+						logger.Warn("no provider defined", "spec", p, "path", path, "operation", opKind, "rp", pinfo.ResourceProviderMS)
+						continue
+					}
+					rp = ResourceRP
+					nextIdx = 0
+				} else {
+					// RP found
+					providerSeg := pathPattern.Segments[providerIdx+1]
+					rp = providerSeg.FixedName
+					rpIsGlob = providerSeg.IsParameter
+					nextIdx = providerIdx + 2
+				}
+
+				// Ignore the too generic api paths:
+				// 1. Those have only one multi-segmented parameter segment. E.g. /{resourceId}
+				if len(pathPattern.Segments[nextIdx:]) == 1 {
+					continue
+				}
+				// 2. Those whose provider and all the following segments are parameterized. E.g. /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}
+				if rpIsGlob && allParameterized(pathPattern.Segments[nextIdx:]) {
 					continue
 				}
 
-				// "providers" segment found
-
-				// This can still be an ACT
-				if len(pathPattern.Segments) == providerIdx+1 {
-					// TODO: ignore the too general ones, but keep the implicit RP Microsoft.Resources
-					logger.Warn("no provider defined", "spec", specpath, "path", path, "operation", opKind, "act", "providers")
-					continue
-				}
-
-				providerSeg := pathPattern.Segments[providerIdx+1]
-				rp = providerSeg.FixedName
-				rpIsGlob = providerSeg.IsParameter
+				// Identify the ACT
 				lastIdx := len(pathPattern.Segments)
-				if len(pathPattern.Segments[providerIdx:])%2 == 1 {
+				if len(pathPattern.Segments[nextIdx:])%2 == 1 {
+					lastIdx = lastIdx - 1
 					seg := pathPattern.Segments[len(pathPattern.Segments)-1]
 					if seg.IsParameter {
-						// TODO: shall we resolve some of these violations
-						logger.Warn("action-like segment is parameterized", "path", path, "operation", opKind)
-						continue
-						//return nil, nil, fmt.Errorf("action-like segment is parameterized, in %s (%s)", path, opKind)
+						if seg.IsMulti {
+							logger.Warn("action segment is multi-segmented parameter", "path", path, "operation", opKind)
+							continue
+						}
+						act = Wildcard
+					} else {
+						act = seg.FixedName
 					}
-					lastIdx = lastIdx - 1
-					act = seg.FixedName
 				}
+
+				// Identify the RT
 				var rts []string
-				for i := providerIdx + 2; i < lastIdx; i += 2 {
+				for i := nextIdx; i < lastIdx; i += 2 {
 					seg := pathPattern.Segments[i]
+					var rtName string
 					if seg.IsParameter {
-						// TODO: shall we resolve some of these violations
-						logger.Warn("resource type is parameterized", "path", path, "operation", opKind, "index", i)
-						continue
-						//return nil, nil, fmt.Errorf("resource type %dth segment is parameterized, in %s (%s)", i, path, opKind)
+						if seg.IsMulti {
+							logger.Warn("resource type is multi-segmented parameter", "path", path, "operation", opKind, "index", i)
+							continue
+						}
+						rtName = Wildcard
+					} else {
+						rtName = seg.FixedName
 					}
-					rts = append(rts, seg.FixedName)
+					rts = append(rts, rtName)
 				}
 				rt = "/" + strings.Join(rts, "/")
 
-				absSpecPath, err := filepath.Abs(specpath)
+				absSpecPath, err := filepath.Abs(p)
 				if err != nil {
-					return nil, fmt.Errorf("failed to get abs path for %s: %v", specpath, err)
+					return nil, fmt.Errorf("failed to get abs path for %s: %v", p, err)
 				}
 
 				opRef := jsonreference.MustCreateRef(absSpecPath + "#" + jsonpointer.Escape(path) + "/" + strings.ToLower(string(opKind)))
@@ -446,4 +469,13 @@ func sortedKeys[K ~string, V any](input map[K]V) []K {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func allParameterized(segs []PathSegment) bool {
+	for _, seg := range segs {
+		if !seg.IsParameter {
+			return false
+		}
+	}
+	return true
 }

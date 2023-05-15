@@ -22,15 +22,27 @@ type Info struct {
 // e.g.
 // - compute/resource-manager/Microsoft.Compute/stable/2020-01-01/compute.json
 // - mediaservices/resource-manager/Microsoft.Media/Accounts/preview/2019-05-01-preview/Accounts.json
-func SpecPathInfo(p string) (*Info, error) {
-	if filepath.IsAbs(p) {
-		return nil, fmt.Errorf("only relative path is allowed")
+func SpecPathInfo(rootdir, p string) (*Info, error) {
+	var err error
+	rootdir, err = filepath.Abs(rootdir)
+	if err != nil {
+		return nil, err
 	}
-	// e.g. turn "./a" to "a"
-	p = filepath.Clean(p)
+	p, err = filepath.Abs(p)
+	if err != nil {
+		return nil, err
+	}
+	p, err = filepath.Rel(rootdir, p)
+	if err != nil {
+		return nil, err
+	}
+
 	segs := strings.Split(string(p), string(os.PathSeparator))
 	if len(segs) < 6 {
 		return nil, fmt.Errorf("swagger spec path expects more nesting level, but %q has only level %d", p, len(segs))
+	}
+	if len(segs) > 7 {
+		return nil, fmt.Errorf("swagger spec path expects less nesting level, but %q has only level %d", p, len(segs))
 	}
 	filename := filepath.Base(string(p))
 	if filepath.Ext(filename) != ".json" {
