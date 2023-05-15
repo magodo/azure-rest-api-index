@@ -18,9 +18,24 @@ import (
 	"github.com/magodo/workerpool"
 )
 
+type FlattenOpIndex map[OpLocator]OperationRefs
+
 type Index struct {
-	rootdir string
-	ops     map[OpLocator]OperationRefs
+	Rootdir           string `json:"rootdir"`
+	ResourceProviders `json:"resource_providers"`
+}
+
+type ResourceProviders map[string]APIVersions
+
+type APIVersions map[string]APIMethods
+
+type APIMethods map[OperationKind]ResourceTypes
+
+type ResourceTypes map[string]*OperationInfo
+
+type OperationInfo struct {
+	Actions       map[string]OperationRefs `json:"actions,omitempty"`
+	OperationRefs `json:"operation_refs,omitempty"`
 }
 
 const Wildcard = "*"
@@ -47,6 +62,27 @@ type OpLocator struct {
 // Since for a given operation locator, there might maps to multiple operation definition, only differing by the contained path pattern, there fore the actual operation ref is keyed by the containing path pattern.
 // The value is a JSON reference to the operation, e.g. <dir>/foo.json#/paths/~1subscriptions~1{subscriptionId}~1providers~1{resourceProviderNamespace}~1register/post
 type OperationRefs map[PathPatternStr]jsonreference.Ref
+
+func (o OperationRefs) MarshalJSON() ([]byte, error) {
+	m := map[string]string{}
+	for k, v := range o {
+		m[string(k)] = v.String()
+	}
+	return json.Marshal(m)
+}
+
+func (o *OperationRefs) UnmarshalJSON(b []byte) error {
+	var m map[string]string
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+	refs := OperationRefs{}
+	for k, v := range m {
+		refs[PathPatternStr(k)] = jsonreference.MustCreateRef(v)
+	}
+	*o = refs
+	return nil
+}
 
 // PathPatternStr represents an API path pattern, with all the fixed segment upper cased, and all the parameterized segment as a literal "{}", or "{*}" (for x-ms-skip-url-encoding).
 type PathPatternStr string
@@ -81,9 +117,45 @@ func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
 		return nil, fmt.Errorf("building operation index: %v", err)
 	}
 
+	// Turn flattend index to layerized index
+	rps := ResourceProviders{}
+	for loc, oprefs := range ops {
+		rp, ok := rps[loc.RP]
+		if !ok {
+			rp = APIVersions{}
+			rps[loc.RP] = rp
+		}
+		rpVer, ok := rp[loc.Version]
+		if !ok {
+			rpVer = APIMethods{}
+			rp[loc.Version] = rpVer
+		}
+		rpVerMethod, ok := rpVer[loc.Method]
+		if !ok {
+			rpVerMethod = ResourceTypes{}
+			rpVer[loc.Method] = rpVerMethod
+		}
+		rpVerMethodRt, ok := rpVerMethod[loc.RT]
+		if !ok {
+			rpVerMethodRt = &OperationInfo{}
+			rpVerMethod[loc.RT] = rpVerMethodRt
+		}
+		if loc.ACT != "" {
+			if rpVerMethodRt.Actions == nil {
+				rpVerMethodRt.Actions = map[string]OperationRefs{}
+			}
+			if _, ok := rpVerMethodRt.Actions[loc.ACT]; ok {
+				return nil, fmt.Errorf("unexpected duplicated resource action at %#v", loc)
+			}
+			rpVerMethodRt.Actions[loc.ACT] = oprefs
+		} else {
+			rpVerMethodRt.OperationRefs = oprefs
+		}
+	}
+
 	index := &Index{
-		rootdir: rootdir,
-		ops:     ops,
+		Rootdir:           rootdir,
+		ResourceProviders: rps,
 	}
 
 	return index, nil
@@ -129,12 +201,12 @@ func collectSpecs(rootdir string) ([]string, error) {
 	return speclist, nil
 }
 
-func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (map[OpLocator]OperationRefs, error) {
+func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (FlattenOpIndex, error) {
 	rootdir, err := filepath.Abs(rootdir)
 	if err != nil {
 		return nil, err
 	}
-	ops := map[OpLocator]OperationRefs{}
+	ops := FlattenOpIndex{}
 	var lock sync.Mutex
 
 	type dupkey struct {
@@ -317,7 +389,7 @@ func PathItemOperation(pathItem spec.PathItem, op OperationKind) *spec.Operation
 }
 
 // parseSpec parses one Swagger spec and returns back a operation index for this spec
-func parseSpec(rootdir, p string) (map[OpLocator]OperationRefs, error) {
+func parseSpec(rootdir, p string) (FlattenOpIndex, error) {
 	doc, err := loads.Spec(p)
 	if err != nil {
 		return nil, fmt.Errorf("loading spec: %v", err)
@@ -341,7 +413,7 @@ func parseSpec(rootdir, p string) (map[OpLocator]OperationRefs, error) {
 	}
 
 	version := swagger.Info.Version
-	infoMap := map[OpLocator]OperationRefs{}
+	index := FlattenOpIndex{}
 	for path, pathItem := range swagger.Paths.Paths {
 		for _, opKind := range PossibleOperationKinds {
 			if PathItemOperation(pathItem, opKind) == nil {
@@ -449,18 +521,18 @@ func parseSpec(rootdir, p string) (map[OpLocator]OperationRefs, error) {
 					opLoc.RP = Wildcard
 				}
 
-				if _, ok := infoMap[opLoc]; !ok {
-					infoMap[opLoc] = map[PathPatternStr]jsonreference.Ref{}
+				if _, ok := index[opLoc]; !ok {
+					index[opLoc] = map[PathPatternStr]jsonreference.Ref{}
 				}
-				if exist, ok := infoMap[opLoc][pathPatternStr]; ok {
+				if exist, ok := index[opLoc][pathPatternStr]; ok {
 					return nil, fmt.Errorf(
 						"operation locator %#v for path pattern %s already applied with operation %s, conflicts to the new operation %s", opLoc, pathPatternStr, &exist, &opRef)
 				}
-				infoMap[opLoc][pathPatternStr] = opRef
+				index[opLoc][pathPatternStr] = opRef
 			}
 		}
 	}
-	return infoMap, nil
+	return index, nil
 }
 
 func sortedKeys[K ~string, V any](input map[K]V) []K {
