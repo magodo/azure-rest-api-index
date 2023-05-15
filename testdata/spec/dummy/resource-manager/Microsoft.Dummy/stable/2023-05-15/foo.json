@@ -1,0 +1,62 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Foo",
+    "version": "2023-05-15"
+  },
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/providers/Microsoft.Dummy/foos/{fooName}": {
+      "get": {
+        "responses": {
+          "200": {}
+        }
+      },
+      "put": {},
+      "delete": {},
+      "parameters": [
+        {
+            "$ref": "#/parameters/fooName"
+        }
+      ]
+    },
+    "/providers/Microsoft.Dummy/foos": {
+      "get": {
+        "responses": {
+          "200": {}
+        }
+      }
+    },
+    "/providers/Microsoft.Dummy/foos/{fooName}/bars/{barName}": {
+      "get": {
+        "responses": {
+          "200": {}
+        }
+      },
+      "parameters": [
+        {
+            "$ref": "#/parameters/fooName"
+        },
+        {
+            "$ref": "#/parameters/barName"
+        }
+      ]
+    }
+  },
+  "parameters": {
+    "fooName": {
+      "name": "fooName",
+      "in": "path",
+      "required": true,
+      "type": "string"
+    },
+    "barName": {
+      "name": "barName",
+      "in": "path",
+      "required": true,
+      "type": "string"
+    }
+  }
+}

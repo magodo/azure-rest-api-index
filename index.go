@@ -35,7 +35,7 @@ type ResourceTypes map[string]*OperationInfo
 
 type OperationInfo struct {
 	Actions       map[string]OperationRefs `json:"actions,omitempty"`
-	OperationRefs `json:"operation_refs,omitempty"`
+	OperationRefs OperationRefs            `json:"operation_refs,omitempty"`
 }
 
 const Wildcard = "*"
@@ -458,7 +458,7 @@ func parseSpec(rootdir, p string) (FlattenOpIndex, error) {
 
 				// Ignore the too generic api paths:
 				// 1. Those have only one multi-segmented parameter segment. E.g. /{resourceId}
-				if len(pathPattern.Segments[nextIdx:]) == 1 {
+				if len(pathPattern.Segments) == 1 {
 					continue
 				}
 				// 2. Those whose provider and all the following segments are parameterized. E.g. /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}

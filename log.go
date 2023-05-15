@@ -1,10 +1,6 @@
 package main
 
-import (
-	"github.com/hashicorp/go-hclog"
-)
-
-var logger Logger
+var logger Logger = &NullLogger{}
 
 func SetLogger(l Logger) {
 	logger = l
@@ -17,4 +13,20 @@ type Logger interface {
 	Error(msg string, args ...interface{})
 }
 
-type DefaultLogger hclog.Logger
+type NullLogger struct{}
+
+func (n *NullLogger) Debug(msg string, args ...interface{}) {
+	return
+}
+
+func (n *NullLogger) Info(msg string, args ...interface{}) {
+	return
+}
+
+func (n *NullLogger) Warn(msg string, args ...interface{}) {
+	return
+}
+
+func (n *NullLogger) Error(msg string, args ...interface{}) {
+	return
+}
