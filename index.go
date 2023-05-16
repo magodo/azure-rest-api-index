@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,7 +14,7 @@ import (
 	"github.com/go-openapi/jsonpointer"
 	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/loads"
-	"github.com/go-openapi/spec"
+	"github.com/magodo/armid"
 	"github.com/magodo/azure-rest-api-index/specpath"
 	"github.com/magodo/workerpool"
 )
@@ -346,48 +347,6 @@ func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (F
 	return ops, nil
 }
 
-type OperationKind string
-
-const (
-	OperationKindGet     OperationKind = "GET"
-	OperationKindPut                   = "PUT"
-	OperationKindPost                  = "POST"
-	OperationKindDelete                = "DELETE"
-	OperationKindOptions               = "OPTIONS"
-	OperationKindHead                  = "HEAD"
-	OperationKindPatch                 = "PATCH"
-)
-
-var PossibleOperationKinds = []OperationKind{
-	OperationKindGet,
-	OperationKindPut,
-	OperationKindPost,
-	OperationKindDelete,
-	OperationKindOptions,
-	OperationKindHead,
-	OperationKindPatch,
-}
-
-func PathItemOperation(pathItem spec.PathItem, op OperationKind) *spec.Operation {
-	switch op {
-	case OperationKindGet:
-		return pathItem.Get
-	case OperationKindPut:
-		return pathItem.Put
-	case OperationKindPost:
-		return pathItem.Post
-	case OperationKindDelete:
-		return pathItem.Delete
-	case OperationKindOptions:
-		return pathItem.Options
-	case OperationKindHead:
-		return pathItem.Head
-	case OperationKindPatch:
-		return pathItem.Patch
-	}
-	return nil
-}
-
 // parseSpec parses one Swagger spec and returns back a operation index for this spec
 func parseSpec(rootdir, p string) (FlattenOpIndex, error) {
 	doc, err := loads.Spec(p)
@@ -535,12 +494,148 @@ func parseSpec(rootdir, p string) (FlattenOpIndex, error) {
 	return index, nil
 }
 
-func sortedKeys[K ~string, V any](input map[K]V) []K {
-	keys := make([]K, 0, len(input))
-	for k := range input {
-		keys = append(keys, k)
+func (idx Index) Lookup(method string, uRL url.URL) (*jsonreference.Ref, error) {
+	path := strings.ToUpper(uRL.Path)
+	operation := OperationKind(strings.ToUpper(method))
+	apiVersion := uRL.Query().Get("api-version")
+
+	segs := strings.Split(strings.Trim(path, "/"), "/")
+
+	respath := path
+	var act string
+	if len(segs)%2 == 1 {
+		act = strings.ToUpper(segs[len(segs)-1])
+		respath = "/" + strings.Join(segs[:len(segs)-1], "/")
 	}
-	return keys
+	id, err := armid.ParseResourceId(respath)
+	if err != nil {
+		return nil, fmt.Errorf("parsing %s as arm id: %v", respath, err)
+	}
+
+	rp := strings.ToUpper(id.Provider())
+	rt := strings.ToUpper("/" + strings.Join(id.Types(), "/"))
+
+	if rpInfo, ok := idx.ResourceProviders[rp]; ok {
+		ref, ok, err := lookupIntoRP(rpInfo, path, apiVersion, operation, rt, act)
+		if err != nil {
+			return nil, fmt.Errorf("lookup for %v (%s) in rp %s: %v", uRL.String(), method, rp, err)
+		}
+		if ok {
+			return ref, nil
+		}
+	}
+	ref, ok, err := lookupIntoRP(idx.ResourceProviders[Wildcard], path, apiVersion, operation, rt, act)
+	if err != nil {
+		return nil, fmt.Errorf("lookup for %v (%s) in the wildcard rp: %v", uRL.String(), method, err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("lookup for %v (%s): matches nothing", uRL.String(), method)
+	}
+	return ref, nil
+}
+
+func lookupIntoRP(rpInfo map[string]APIMethods, path, apiVersion string, operation OperationKind, rt, act string) (*jsonreference.Ref, bool, error) {
+	rpVer, ok := rpInfo[apiVersion]
+	if !ok {
+		return nil, false, nil
+	}
+	rpVerOp, ok := rpVer[operation]
+	if !ok {
+		return nil, false, nil
+	}
+
+	buildRTMatcher := func(rt string) Matcher {
+		segs := strings.Split(strings.Trim(rt, "/"), "/")
+		m := Matcher{
+			PrefixSep: true,
+			Separater: "/",
+		}
+		for _, seg := range segs {
+			if seg == "*" {
+				m.Segments = append(m.Segments, MatchSegment{IsWildcard: true})
+				continue
+			}
+			m.Segments = append(m.Segments, MatchSegment{Value: seg})
+		}
+		return m
+	}
+
+	type opInfoWrapper struct {
+		info      OperationInfo
+		rtMatcher Matcher
+	}
+
+	var opInfoWrappers []opInfoWrapper
+	for rt, opInfo := range rpVerOp {
+		opInfoWrappers = append(opInfoWrappers, opInfoWrapper{
+			info:      *opInfo,
+			rtMatcher: buildRTMatcher(rt),
+		})
+	}
+
+	// Sort the resource type matchers to match from the most specific to the most general
+	sort.Slice(opInfoWrappers, func(i, j int) bool {
+		return opInfoWrappers[i].rtMatcher.Less(opInfoWrappers[j].rtMatcher)
+	})
+
+	for _, opInfoWrapper := range opInfoWrappers {
+		if !opInfoWrapper.rtMatcher.Match(rt) {
+			continue
+		}
+		opInfo := opInfoWrapper.info
+		oprefs := opInfo.OperationRefs
+		if act != "" {
+			if len(opInfo.Actions) == 0 {
+				continue
+			}
+			var ok bool
+			oprefs, ok = opInfo.Actions[act]
+			if !ok {
+				oprefs, ok = opInfo.Actions[Wildcard]
+				if !ok {
+					continue
+				}
+			}
+		}
+
+		// Select the best matching path from candidate paths
+		type opRefWrapper struct {
+			ref         jsonreference.Ref
+			pathMatcher Matcher
+		}
+		var opRefWrappers []opRefWrapper
+		for ppath, ref := range oprefs {
+			pathPattern := ParsePathPatternFromString(string(ppath))
+			m := Matcher{
+				PrefixSep: true,
+				Separater: "/",
+			}
+			for _, seg := range pathPattern.Segments {
+				m.Segments = append(m.Segments, MatchSegment{
+					Value:      seg.FixedName,
+					IsWildcard: seg.IsParameter,
+					IsAny:      seg.IsMulti,
+				})
+			}
+			opRefWrappers = append(opRefWrappers, opRefWrapper{
+				ref:         ref,
+				pathMatcher: m,
+			})
+		}
+
+		// Sort the path matchers to match from the most specific to the most general
+		sort.Slice(opRefWrappers, func(i, j int) bool {
+			return opRefWrappers[i].pathMatcher.Less(opRefWrappers[j].pathMatcher)
+		})
+
+		for _, opRefWrapper := range opRefWrappers {
+			if opRefWrapper.pathMatcher.Match(path) {
+				return &opRefWrapper.ref, true, nil
+			}
+		}
+	}
+
+	return nil, false, nil
 }
 
 func allParameterized(segs []PathSegment) bool {

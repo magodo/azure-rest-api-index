@@ -38,15 +38,9 @@ func (m Matcher) Match(input string) bool {
 	return regexp.MustCompile("^" + regstr + "$").MatchString(input)
 }
 
-type Matchers []Matcher
-
-func (m Matchers) Len() int {
-	return len(m)
-}
-
-func (m Matchers) Less(i int, j int) bool {
+func (m Matcher) Less(om Matcher) bool {
 	var fixCnt1, fixCnt2, wildcardCnt1, wildcardCnt2, anyCnt1, anyCnt2 int
-	for _, seg := range m[i].Segments {
+	for _, seg := range m.Segments {
 		if !seg.IsWildcard {
 			fixCnt1++
 			continue
@@ -57,7 +51,7 @@ func (m Matchers) Less(i int, j int) bool {
 		}
 		anyCnt1++
 	}
-	for _, seg := range m[j].Segments {
+	for _, seg := range om.Segments {
 		if !seg.IsWildcard {
 			fixCnt2++
 			continue
@@ -82,8 +76,8 @@ func (m Matchers) Less(i int, j int) bool {
 	}
 
 	// If all are the same, then compare per segment
-	for idx := 0; idx < len(m[i].Segments); idx++ {
-		seg1, seg2 := m[i].Segments[idx], m[j].Segments[idx]
+	for idx := 0; idx < len(m.Segments); idx++ {
+		seg1, seg2 := m.Segments[idx], om.Segments[idx]
 		if seg1.IsWildcard != seg2.IsWildcard {
 			return !seg1.IsWildcard
 		}
@@ -97,6 +91,16 @@ func (m Matchers) Less(i int, j int) bool {
 		}
 	}
 	return false
+}
+
+type Matchers []Matcher
+
+func (m Matchers) Len() int {
+	return len(m)
+}
+
+func (m Matchers) Less(i int, j int) bool {
+	return m[i].Less(m[j])
 }
 
 func (m Matchers) Swap(i int, j int) {

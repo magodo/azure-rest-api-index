@@ -8,6 +8,7 @@ require (
 	github.com/go-openapi/loads v0.21.2
 	github.com/go-openapi/spec v0.20.9
 	github.com/hashicorp/go-hclog v1.5.0
+	github.com/magodo/armid v0.0.0-20230511151020-27880e5961c3
 	github.com/magodo/workerpool v0.0.0-20230119025400-40192d2716ea
 	github.com/stretchr/testify v1.8.1
 	gopkg.in/yaml.v3 v3.0.1

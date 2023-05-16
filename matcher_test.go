@@ -367,7 +367,7 @@ func TestMatchers_Less(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.isLess, Matchers{tt.m1, tt.m2}.Less(0, 1))
+			require.Equal(t, tt.isLess, tt.m1.Less(tt.m2))
 		})
 	}
 }
