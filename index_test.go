@@ -28,21 +28,21 @@ func TestBuildIndex(t *testing.T) {
         "DELETE": {
           "/FOOS": {
             "operation_refs": {
-              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/preview/2023-05-01-preview/foo.json#~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/delete"
+              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/preview/2023-05-01-preview/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/delete"
             }
           }
         },
         "GET": {
           "/FOOS": {
             "operation_refs": {
-              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/preview/2023-05-01-preview/foo.json#~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/get"
+              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/preview/2023-05-01-preview/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/get"
             }
           }
         },
         "PUT": {
           "/FOOS": {
             "operation_refs": {
-              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/preview/2023-05-01-preview/foo.json#~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/put"
+              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/preview/2023-05-01-preview/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/put"
             }
           }
         }
@@ -51,7 +51,7 @@ func TestBuildIndex(t *testing.T) {
         "DELETE": {
           "/FOOS": {
             "operation_refs": {
-              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/delete"
+              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/delete"
             }
           }
         },
@@ -59,25 +59,25 @@ func TestBuildIndex(t *testing.T) {
           "/": {
             "actions": {
               "FOOS": {
-                "/PROVIDERS/MICROSOFT.DUMMY/FOOS": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#~1providers~1Microsoft.Dummy~1foos/get"
+                "/PROVIDERS/MICROSOFT.DUMMY/FOOS": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos/get"
               }
             }
           },
           "/FOOS": {
             "operation_refs": {
-              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/get"
+              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/get"
             }
           },
           "/FOOS/BARS": {
             "operation_refs": {
-              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}/BARS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D~1bars~1%%7BbarName%%7D/get"
+              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}/BARS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D~1bars~1%%7BbarName%%7D/get"
             }
           }
         },
         "PUT": {
           "/FOOS": {
             "operation_refs": {
-              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/put"
+              "/PROVIDERS/MICROSOFT.DUMMY/FOOS/{}": "%[1]s/testdata/spec/dummy/resource-manager/Microsoft.Dummy/stable/2023-05-15/foo.json#/paths/~1providers~1Microsoft.Dummy~1foos~1%%7BfooName%%7D/put"
             }
           }
         }

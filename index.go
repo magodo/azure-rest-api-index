@@ -88,7 +88,7 @@ func (o *OperationRefs) UnmarshalJSON(b []byte) error {
 // PathPatternStr represents an API path pattern, with all the fixed segment upper cased, and all the parameterized segment as a literal "{}", or "{*}" (for x-ms-skip-url-encoding).
 type PathPatternStr string
 
-func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
+func BuildIndex(specdir string, dedupFile string) (*Index, error) {
 	var deduplicator Deduplicator
 	if dedupFile != "" {
 		b, err := os.ReadFile(dedupFile)
@@ -104,16 +104,15 @@ func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
 			return nil, fmt.Errorf("converting the dedup file: %v", err)
 		}
 	}
-
-	logger.Info("Collecting specs", "dir", rootdir)
-	l, err := collectSpecs(rootdir)
+	logger.Info("Collecting specs", "dir", specdir)
+	l, err := collectSpecs(specdir)
 	if err != nil {
 		return nil, fmt.Errorf("collecting specs: %v", err)
 	}
 	logger.Info(fmt.Sprintf("%d specs collected", len(l)))
 
 	logger.Info("Building operation index")
-	ops, err := buildOpsIndex(rootdir, deduplicator, l)
+	ops, err := buildOpsIndex(specdir, deduplicator, l)
 	if err != nil {
 		return nil, fmt.Errorf("building operation index: %v", err)
 	}
@@ -155,7 +154,7 @@ func BuildIndex(rootdir string, dedupFile string) (*Index, error) {
 	}
 
 	index := &Index{
-		Rootdir:           rootdir,
+		Rootdir:           specdir,
 		ResourceProviders: rps,
 	}
 
@@ -285,10 +284,12 @@ func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (F
 	dups = newdups
 
 	// Resolve duplicates (manually)
-	if deduplicator != nil {
-		for k, refs := range dups {
-			var dedupOp *DedupOp
-			var matcherName string
+	for k, refs := range dups {
+		var dedupOp *DedupOp
+		var matcherName string
+
+		// Look for the dedup operator
+		if deduplicator != nil {
 			for matcher, op := range deduplicator {
 				op := op
 				if matcher.Match(k.OpLocator, string(k.PathPatternStr)) {
@@ -299,49 +300,49 @@ func buildOpsIndex(rootdir string, deduplicator Deduplicator, specs []string) (F
 					matcherName = matcher.Name
 				}
 			}
+		}
 
-			var refStrs []string
-			for _, ref := range refs {
-				refStrs = append(refStrs, ref.String())
-			}
-			refMsg := "\n" + strings.Join(refStrs, "\n")
+		var refStrs []string
+		for _, ref := range refs {
+			refStrs = append(refStrs, ref.String())
+		}
+		refMsg := "\n" + strings.Join(refStrs, "\n")
 
-			if dedupOp != nil {
-				switch {
-				case dedupOp.Picker != nil:
-					picker := dedupOp.Picker
-					var pickCnt int
-					var pickRef jsonreference.Ref
-					for _, ref := range refs {
-						if picker.Match(ref) {
-							pickCnt++
-							pickRef = ref
-						}
-					}
-					if pickCnt == 0 {
-						logger.Warn("dedup matcher picked nothing", "oploc", k.OpLocator, "path", k.PathPatternStr, "matcher", matcherName, "refs", refMsg)
-						continue
-						//return nil, fmt.Errorf("dedup matcher %s picked nothing for %s. refs: %v", matcherName, k, refMsg)
-					}
-					if pickCnt > 1 {
-						logger.Warn("still have duplicates after dedup picking", "oploc", k.OpLocator, "path", k.PathPatternStr, "matcher", matcherName, "refs", refMsg)
-						continue
-						//return nil, fmt.Errorf("still have duplicates after dedup matcher %s picking for %s. refs: %v", matcherName, k, refMsg)
-					}
-					ops[k.OpLocator][k.PathPatternStr] = pickRef
-				case dedupOp.Any:
-					ops[k.OpLocator][k.PathPatternStr] = refs[0]
-				case dedupOp.Ignore:
-					delete(ops[k.OpLocator], k.PathPatternStr)
-					if len(ops[k.OpLocator]) == 0 {
-						delete(ops, k.OpLocator)
+		if dedupOp != nil {
+			switch {
+			case dedupOp.Picker != nil:
+				picker := dedupOp.Picker
+				var pickCnt int
+				var pickRef jsonreference.Ref
+				for _, ref := range refs {
+					if picker.Match(ref) {
+						pickCnt++
+						pickRef = ref
 					}
 				}
-				continue
+				if pickCnt == 0 {
+					logger.Warn("dedup matcher picked nothing", "oploc", k.OpLocator, "path", k.PathPatternStr, "matcher", matcherName, "refs", refMsg)
+					continue
+					//return nil, fmt.Errorf("dedup matcher %s picked nothing for %s. refs: %v", matcherName, k, refMsg)
+				}
+				if pickCnt > 1 {
+					logger.Warn("still have duplicates after dedup picking", "oploc", k.OpLocator, "path", k.PathPatternStr, "matcher", matcherName, "refs", refMsg)
+					continue
+					//return nil, fmt.Errorf("still have duplicates after dedup matcher %s picking for %s. refs: %v", matcherName, k, refMsg)
+				}
+				ops[k.OpLocator][k.PathPatternStr] = pickRef
+			case dedupOp.Any:
+				ops[k.OpLocator][k.PathPatternStr] = refs[0]
+			case dedupOp.Ignore:
+				delete(ops[k.OpLocator], k.PathPatternStr)
+				if len(ops[k.OpLocator]) == 0 {
+					delete(ops, k.OpLocator)
+				}
 			}
-
-			logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)
+			continue
 		}
+
+		logger.Warn("duplicate definition", "oploc", k.OpLocator, "path", k.PathPatternStr, "refs", refMsg)
 	}
 
 	return ops, nil
@@ -464,7 +465,7 @@ func parseSpec(rootdir, p string) (FlattenOpIndex, error) {
 					return nil, fmt.Errorf("failed to get abs path for %s: %v", p, err)
 				}
 
-				opRef := jsonreference.MustCreateRef(absSpecPath + "#" + jsonpointer.Escape(path) + "/" + strings.ToLower(string(opKind)))
+				opRef := jsonreference.MustCreateRef(absSpecPath + "#/paths/" + jsonpointer.Escape(path) + "/" + strings.ToLower(string(opKind)))
 
 				pathPatternStr := PathPatternStr(strings.ToUpper(pathPattern.String()))
 
