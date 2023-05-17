@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"testing"
 
 	"github.com/go-openapi/jsonreference"
@@ -97,7 +96,7 @@ func TestIndex_Lookup(t *testing.T) {
 					"GET": ResourceTypes{
 						"/FOOS": &OperationInfo{
 							OperationRefs: OperationRefs{
-								"/PROVIDERS/RP1/FOOS/{}": jsonreference.MustCreateRef("#*:VER1:GET:/FOOS::P1"),
+								"/PROVIDERS/{}/FOOS/{}": jsonreference.MustCreateRef("#*:VER1:GET:/FOOS::P1"),
 							},
 						},
 					},
@@ -107,16 +106,43 @@ func TestIndex_Lookup(t *testing.T) {
 				"ver1": APIMethods{
 					"GET": ResourceTypes{
 						"/": &OperationInfo{
-							Actions: map[string]OperationRefs{
-								"ACT1": {
-									"/PROVIDERS/RP1/ACT1":                  jsonreference.MustCreateRef("#RP1:VER1:GET:/:ACT1:P1"),
-									"/SUBSCRIPTIONS/{}/PROVIDERS/RP1/ACT1": jsonreference.MustCreateRef("#RP1:VER1:GET:/:ACT1:P2"),
-								},
-							},
 							OperationRefs: OperationRefs{
 								"/PROVIDERS/RP1":                  jsonreference.MustCreateRef("#RP1:VER1:GET:/::P1"),
 								"/SUBSCRIPTIONS/{}/PROVIDERS/RP1": jsonreference.MustCreateRef("#RP1:VER1:GET:/::P2"),
 								"/{*}/PROVIDERS/RP1":              jsonreference.MustCreateRef("#RP1:VER1:GET:/::P3"),
+							},
+						},
+						"/FOOS": &OperationInfo{
+							OperationRefs: OperationRefs{
+								"/PROVIDERS/RP1/FOOS/{}":      jsonreference.MustCreateRef("#RP1:VER1:GET:/FOOS::P1"),
+								"/PROVIDERS/RP1/FOOS/DEFAULT": jsonreference.MustCreateRef("#RP1:VER1:GET:/FOOS::P2"),
+							},
+						},
+						"/FOOS/BARS": &OperationInfo{
+							OperationRefs: OperationRefs{
+								"/PROVIDERS/RP1/FOOS/{}/BARS/{}": jsonreference.MustCreateRef("#RP1:VER1:GET:/FOOS/BARS::P1"),
+							},
+						},
+						"/FOOS/*": &OperationInfo{
+							OperationRefs: OperationRefs{
+								"/PROVIDERS/RP1/FOOS/{}/{}/{}": jsonreference.MustCreateRef("#RP1:VER1:GET:/FOOS/*::P1"),
+							},
+						},
+					},
+					"POST": ResourceTypes{
+						"/": &OperationInfo{
+							Actions: map[string]OperationRefs{
+								"ACT1": {
+									"/PROVIDERS/RP1/ACT1":                  jsonreference.MustCreateRef("#RP1:VER1:POST:/:ACT1:P1"),
+									"/SUBSCRIPTIONS/{}/PROVIDERS/RP1/ACT1": jsonreference.MustCreateRef("#RP1:VER1:POST:/:ACT1:P2"),
+								},
+							},
+						},
+						"/FOOS": &OperationInfo{
+							Actions: map[string]OperationRefs{
+								"*": {
+									"/PROVIDERS/RP1/FOOS/{}/{}": jsonreference.MustCreateRef("#RP1:VER1:POST:/FOOS:*:P1"),
+								},
 							},
 						},
 					},
@@ -141,13 +167,13 @@ func TestIndex_Lookup(t *testing.T) {
 	}{
 		{
 			url:    mustParseURL("/providers/rp1/act1?api-version=ver1"),
-			method: "get",
-			expect: "#RP1:VER1:GET:/:ACT1:P1",
+			method: "post",
+			expect: "#RP1:VER1:POST:/:ACT1:P1",
 		},
 		{
 			url:    mustParseURL("/subscriptions/sub1/providers/rp1/act1?api-version=ver1"),
-			method: "get",
-			expect: "#RP1:VER1:GET:/:ACT1:P2",
+			method: "post",
+			expect: "#RP1:VER1:POST:/:ACT1:P2",
 		},
 		{
 			url:        mustParseURL("/subscriptions/sub1/resourceGroups/rg1/providers/rp1/act1?api-version=ver1"),
@@ -160,14 +186,44 @@ func TestIndex_Lookup(t *testing.T) {
 			expect: "#RP1:VER1:GET:/::P3",
 		},
 		{
-			url:    mustParseURL("/providers/rp1/foos/foo1?api-version=ver1"),
+			url:    mustParseURL("/providers/rp0/foos/foo1?api-version=ver1"),
 			method: "get",
 			expect: "#*:VER1:GET:/FOOS::P1",
 		},
+		{
+			url:    mustParseURL("/providers/rp0/foos/foo1?api-version=ver1"),
+			method: "get",
+			expect: "#*:VER1:GET:/FOOS::P1",
+		},
+		{
+			url:    mustParseURL("/providers/rp1/foos/foo1?api-version=ver1"),
+			method: "get",
+			expect: "#RP1:VER1:GET:/FOOS::P1",
+		},
+		{
+			url:    mustParseURL("/providers/rp1/foos/default?api-version=ver1"),
+			method: "get",
+			expect: "#RP1:VER1:GET:/FOOS::P2",
+		},
+		{
+			url:    mustParseURL("/providers/rp1/foos/foo1/sleep?api-version=ver1"),
+			method: "post",
+			expect: "#RP1:VER1:POST:/FOOS:*:P1",
+		},
+		{
+			url:    mustParseURL("/providers/rp1/foos/foo1/bars/bar1?api-version=ver1"),
+			method: "get",
+			expect: "#RP1:VER1:GET:/FOOS/BARS::P1",
+		},
+		{
+			url:    mustParseURL("/providers/rp1/foos/foo1/bazs/baz1?api-version=ver1"),
+			method: "get",
+			expect: "#RP1:VER1:GET:/FOOS/*::P1",
+		},
 	}
 
-	for i, tt := range cases {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
+	for _, tt := range cases {
+		t.Run(tt.method+" "+tt.url.String(), func(t *testing.T) {
 			ref, err := index.Lookup(tt.method, tt.url)
 			if tt.errPattern != "" {
 				require.Error(t, err)
