@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/magodo/azure-rest-api-index/azidx"
 	"log"
 	"net/url"
 	"os"
@@ -70,7 +71,7 @@ func main() {
 						return fmt.Errorf("More than one arguments specified")
 					}
 					specdir := c.Args().First()
-					index, err := BuildIndex(specdir, flagDedup)
+					index, err := azidx.BuildIndex(specdir, flagDedup)
 					if err != nil {
 						return err
 					}
@@ -118,7 +119,7 @@ func main() {
 					if err != nil {
 						return fmt.Errorf("reading index file %s: %v", flagIndex, err)
 					}
-					var index Index
+					var index azidx.Index
 					if err := json.Unmarshal(b, &index); err != nil {
 						return fmt.Errorf("unmarshal index file: %v", err)
 					}
@@ -166,7 +167,7 @@ func initLogger() {
 		Level: hclog.LevelFromString(lvl),
 		Color: hclog.AutoColor,
 	})
-	SetLogger(logger)
+	azidx.SetLogger(logger)
 }
 
 func buildGithubLink(ptr jsonpointer.Pointer, commit, specdir, fpath string) (string, error) {
@@ -174,7 +175,7 @@ func buildGithubLink(ptr jsonpointer.Pointer, commit, specdir, fpath string) (st
 	if err != nil {
 		return "", err
 	}
-	offset, err := JSONPointerOffset(ptr, string(b))
+	offset, err := azidx.JSONPointerOffset(ptr, string(b))
 	if err != nil {
 		return "", err
 	}

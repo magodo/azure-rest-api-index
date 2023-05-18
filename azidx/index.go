@@ -1,4 +1,4 @@
-package main
+package azidx
 
 import (
 	"encoding/json"
@@ -11,12 +11,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/magodo/azure-rest-api-index/azidx/specpath"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-openapi/jsonpointer"
 	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/loads"
 	"github.com/magodo/armid"
-	"github.com/magodo/azure-rest-api-index/specpath"
 	"github.com/magodo/workerpool"
 )
 
@@ -518,11 +519,11 @@ func parseSpec(rootdir, p string) (FlattenOpIndex, error) {
 }
 
 func (idx Index) Lookup(method string, uRL url.URL) (*jsonreference.Ref, error) {
-	path := strings.ToUpper(uRL.Path)
 	operation := OperationKind(strings.ToUpper(method))
 	apiVersion := uRL.Query().Get("api-version")
 
-	segs := strings.Split(strings.Trim(path, "/"), "/")
+	path := strings.TrimRight(strings.ToUpper(uRL.Path), "/")
+	segs := strings.Split(strings.TrimLeft(path, "/"), "/")
 
 	respath := path
 	var act string

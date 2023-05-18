@@ -1,4 +1,4 @@
-package main
+package azidx
 
 var logger Logger = &NullLogger{}
 

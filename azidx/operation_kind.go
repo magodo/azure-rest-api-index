@@ -1,4 +1,4 @@
-package main
+package azidx
 
 import "github.com/go-openapi/spec"
 

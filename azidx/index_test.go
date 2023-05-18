@@ -1,10 +1,11 @@
-package main
+package azidx
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -13,12 +14,13 @@ import (
 )
 
 func TestBuildIndex(t *testing.T) {
-	specRoot := "./testdata/spec"
+	specRoot := "../testdata/spec"
 	idx, err := BuildIndex(specRoot, "")
 	require.NoError(t, err)
 	b, err := json.MarshalIndent(idx, "", "  ")
 	require.NoError(t, err)
 	pwd, err := os.Getwd()
+	rootdir := filepath.Dir(pwd)
 	require.NoError(t, err)
 	expected := fmt.Sprintf(`{
   "specdir": "%[1]s/testdata/spec",
@@ -84,7 +86,7 @@ func TestBuildIndex(t *testing.T) {
       }
     }
   }
-}`, pwd)
+}`, rootdir)
 	require.Equal(t, expected, string(b))
 }
 

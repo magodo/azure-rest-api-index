@@ -1,4 +1,4 @@
-package main
+package azidx
 
 import (
 	"testing"
@@ -118,14 +118,14 @@ func TestParsePathPatternFromSwagger(t *testing.T) {
 		},
 	}
 
-	doc, err := loads.Spec("./testdata/path_pattern/resources.json")
+	doc, err := loads.Spec("../testdata/path_pattern/resources.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	swagger := doc.Spec()
 	for _, tt := range cases {
 		t.Run(tt.path, func(t *testing.T) {
-			p, err := ParsePathPatternFromSwagger("./testdata/path_pattern/resources.json", swagger, tt.path, OperationKindGet)
+			p, err := ParsePathPatternFromSwagger("../testdata/path_pattern/resources.json", swagger, tt.path, OperationKindGet)
 			if tt.hasError {
 				require.Error(t, err)
 				return
