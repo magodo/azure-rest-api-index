@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
+	"text/scanner"
 
+	"github.com/go-openapi/jsonpointer"
 	"github.com/hashicorp/go-hclog"
 	"github.com/urfave/cli/v2"
 )
@@ -126,12 +131,20 @@ func main() {
 						return err
 					}
 					pointerTokens := ref.GetPointer().DecodedTokens()
-					fmt.Printf(`
-File	: %s
+					out := fmt.Sprintf(`
 Path	: %s
 Method  : %s
-Raw     : %s
-`, ref.GetURL().Path, pointerTokens[1], pointerTokens[2], ref.String())
+File	: %s
+`, ref.GetURL().Path, pointerTokens[1], pointerTokens[2])
+					if index.Commit != "" {
+						link, err := buildGithubLink(*ref.GetPointer(), index.Commit, index.Specdir, ref.GetURL().Path)
+						if err != nil {
+							return err
+						}
+						out += "Link    : " + link + "\n"
+					}
+					out += "Raw     : " + ref.String()
+					fmt.Println(out)
 					return nil
 				},
 			},
@@ -154,4 +167,28 @@ func initLogger() {
 		Color: hclog.AutoColor,
 	})
 	SetLogger(logger)
+}
+
+func buildGithubLink(ptr jsonpointer.Pointer, commit, specdir, fpath string) (string, error) {
+	b, err := os.ReadFile(fpath)
+	if err != nil {
+		return "", err
+	}
+	offset, err := JSONPointerOffset(ptr, string(b))
+	if err != nil {
+		return "", err
+	}
+	var sc scanner.Scanner
+	sc.Init(bytes.NewBuffer(b))
+	fmt.Println(offset)
+	for i := 0; i < int(offset); i++ {
+		sc.Next()
+	}
+	pos := sc.Pos()
+
+	relFile, err := filepath.Rel(specdir, fpath)
+	if err != nil {
+		return "", err
+	}
+	return "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(pos.Line), nil
 }

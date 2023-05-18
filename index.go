@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/go-openapi/jsonpointer"
 	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/loads"
@@ -22,7 +23,8 @@ import (
 type FlattenOpIndex map[OpLocator]OperationRefs
 
 type Index struct {
-	Rootdir           string `json:"rootdir"`
+	Specdir           string `json:"specdir"`
+	Commit            string `json:"commit,omitempty"`
 	ResourceProviders `json:"resource_providers"`
 }
 
@@ -89,6 +91,10 @@ func (o *OperationRefs) UnmarshalJSON(b []byte) error {
 type PathPatternStr string
 
 func BuildIndex(specdir string, dedupFile string) (*Index, error) {
+	specdir, err := filepath.Abs(specdir)
+	if err != nil {
+		return nil, err
+	}
 	var deduplicator Deduplicator
 	if dedupFile != "" {
 		b, err := os.ReadFile(dedupFile)
@@ -104,6 +110,21 @@ func BuildIndex(specdir string, dedupFile string) (*Index, error) {
 			return nil, fmt.Errorf("converting the dedup file: %v", err)
 		}
 	}
+
+	var commit string
+	repo, err := git.PlainOpen(filepath.Dir(specdir))
+	if err != nil {
+		if err != git.ErrRepositoryNotExists {
+			return nil, err
+		}
+	} else {
+		ref, err := repo.Head()
+		if err != nil {
+			return nil, err
+		}
+		commit = ref.Hash().String()
+	}
+
 	logger.Info("Collecting specs", "dir", specdir)
 	l, err := collectSpecs(specdir)
 	if err != nil {
@@ -154,7 +175,8 @@ func BuildIndex(specdir string, dedupFile string) (*Index, error) {
 	}
 
 	index := &Index{
-		Rootdir:           specdir,
+		Specdir:           specdir,
+		Commit:            commit,
 		ResourceProviders: rps,
 	}
 

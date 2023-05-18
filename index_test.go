@@ -21,7 +21,7 @@ func TestBuildIndex(t *testing.T) {
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
 	expected := fmt.Sprintf(`{
-  "rootdir": "./testdata/spec",
+  "specdir": "%[1]s/testdata/spec",
   "resource_providers": {
     "MICROSOFT.DUMMY": {
       "2023-05-01-preview": {
