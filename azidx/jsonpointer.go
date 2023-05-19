@@ -42,6 +42,7 @@ func JSONPointerOffset(p jsonpointer.Pointer, document string) (int64, error) {
 
 func offsetSingleObject(dec *json.Decoder, decodedToken string) (int64, error) {
 	for dec.More() {
+		offset := dec.InputOffset()
 		tk, err := dec.Token()
 		if err != nil {
 			return 0, err
@@ -60,7 +61,7 @@ func offsetSingleObject(dec *json.Decoder, decodedToken string) (int64, error) {
 			}
 		case string:
 			if tk == decodedToken {
-				return dec.InputOffset(), nil
+				return offset, nil
 			}
 		default:
 			return 0, fmt.Errorf("invalid token %#v", tk)
