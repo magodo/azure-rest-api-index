@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path/filepath"
 
 	"github.com/magodo/azure-rest-api-index/azidx"
 
@@ -143,11 +142,7 @@ Method  : %s
 `, ref.String(), ref.GetURL().Path, pointerTokens[1], pointerTokens[2])
 
 					if index.Commit != "" && flagSpecDir != "" {
-						p, err := filepath.Abs(filepath.Join(flagSpecDir, ref.GetURL().Path))
-						if err != nil {
-							return err
-						}
-						link, err := azidx.BuildGithubLink(*ref.GetPointer(), index.Commit, flagSpecDir, p)
+						link, err := azidx.BuildGithubLink(*ref, index.Commit, flagSpecDir)
 						if err != nil {
 							return err
 						}

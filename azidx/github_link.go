@@ -9,27 +9,31 @@ import (
 	"text/scanner"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-openapi/jsonpointer"
+	"github.com/go-openapi/jsonreference"
 )
 
-func BuildGithubLink(ptr jsonpointer.Pointer, commit, specdir, fpath string) (string, error) {
+func BuildGithubLink(ref jsonreference.Ref, commit, specdir string) (string, error) {
 	repo, err := git.PlainOpen(filepath.Dir(specdir))
 	if err != nil {
 		return "", err
 	}
-	ref, err := repo.Head()
+	head, err := repo.Head()
 	if err != nil {
 		return "", err
 	}
-	if repoCommit := ref.Hash().String(); repoCommit != commit {
+	if repoCommit := head.Hash().String(); repoCommit != commit {
 		return "", fmt.Errorf("repository commit %q not equals to the commit the index is built %q", repoCommit, commit)
 	}
 
+	fpath, err := filepath.Abs(filepath.Join(specdir, ref.GetURL().Path))
+	if err != nil {
+		return "", err
+	}
 	b, err := os.ReadFile(fpath)
 	if err != nil {
 		return "", err
 	}
-	offset, err := JSONPointerOffset(ptr, string(b))
+	offset, err := JSONPointerOffset(*ref.GetPointer(), string(b))
 	if err != nil {
 		return "", err
 	}
