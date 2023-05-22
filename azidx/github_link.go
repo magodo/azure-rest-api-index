@@ -15,14 +15,17 @@ import (
 func BuildGithubLink(ref jsonreference.Ref, commit, specdir string) (string, error) {
 	repo, err := git.PlainOpen(filepath.Dir(specdir))
 	if err != nil {
-		return "", err
-	}
-	head, err := repo.Head()
-	if err != nil {
-		return "", err
-	}
-	if repoCommit := head.Hash().String(); repoCommit != commit {
-		return "", fmt.Errorf("repository commit %q not equals to the commit the index is built %q", repoCommit, commit)
+		if err != git.ErrRepositoryNotExists {
+			return "", err
+		}
+	} else {
+		head, err := repo.Head()
+		if err != nil {
+			return "", err
+		}
+		if repoCommit := head.Hash().String(); repoCommit != commit {
+			return "", fmt.Errorf("repository commit %q not equals to the commit the index is built %q", repoCommit, commit)
+		}
 	}
 
 	fpath, err := filepath.Abs(filepath.Join(specdir, ref.GetURL().Path))
