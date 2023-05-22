@@ -46,6 +46,7 @@ input-file:
   - e.json
   - c.json
   - foo/$(this-folder)/z.json
+  - foo\bar\baz.json
 %[1]s%[1]s%[1]s
 `, "`")
 	speclist, err := SpecListFromReadmeMD([]byte(input))
@@ -56,6 +57,7 @@ input-file:
 		"c.json",
 		"d.json",
 		"e.json",
+		"foo/bar/baz.json",
 		"foo/z.json",
 		"x.json",
 	}, speclist)
