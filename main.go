@@ -1,18 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/magodo/azure-rest-api-index/azidx"
 	"log"
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
-	"text/scanner"
 
-	"github.com/go-openapi/jsonpointer"
+	"github.com/magodo/azure-rest-api-index/azidx"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/urfave/cli/v2"
 )
@@ -23,9 +20,10 @@ var (
 	flagOutput string
 	flagDedup  string
 
-	flagIndex  string
-	flagMethod string
-	flagURL    string
+	flagIndex   string
+	flagMethod  string
+	flagURL     string
+	flagSpecDir string
 )
 
 func main() {
@@ -113,6 +111,11 @@ func main() {
 						Destination: &flagURL,
 						Required:    true,
 					},
+					&cli.StringFlag{
+						Name:        "specdir",
+						Usage:       `The spec dir, which is used to generate the Github permlink to the operation (the commit of the repo has to be the same as the index)`,
+						Destination: &flagSpecDir,
+					},
 				},
 				Action: func(c *cli.Context) error {
 					b, err := os.ReadFile(flagIndex)
@@ -133,18 +136,24 @@ func main() {
 					}
 					pointerTokens := ref.GetPointer().DecodedTokens()
 					out := fmt.Sprintf(`
+Raw     : %s
+File	: %s
 Path	: %s
 Method  : %s
-File	: %s
-`, ref.GetURL().Path, pointerTokens[1], pointerTokens[2])
-					if index.Commit != "" {
-						link, err := buildGithubLink(*ref.GetPointer(), index.Commit, index.Specdir, ref.GetURL().Path)
+`, ref.String(), ref.GetURL().Path, pointerTokens[1], pointerTokens[2])
+
+					if index.Commit != "" && flagSpecDir != "" {
+						p, err := filepath.Abs(filepath.Join(flagSpecDir, ref.GetURL().Path))
+						if err != nil {
+							return err
+						}
+						link, err := azidx.BuildGithubLink(*ref.GetPointer(), index.Commit, flagSpecDir, p)
 						if err != nil {
 							return err
 						}
 						out += "Link    : " + link + "\n"
 					}
-					out += "Raw     : " + ref.String()
+
 					fmt.Println(out)
 					return nil
 				},
@@ -168,28 +177,4 @@ func initLogger() {
 		Color: hclog.AutoColor,
 	})
 	azidx.SetLogger(logger)
-}
-
-func buildGithubLink(ptr jsonpointer.Pointer, commit, specdir, fpath string) (string, error) {
-	b, err := os.ReadFile(fpath)
-	if err != nil {
-		return "", err
-	}
-	offset, err := azidx.JSONPointerOffset(ptr, string(b))
-	if err != nil {
-		return "", err
-	}
-	var sc scanner.Scanner
-	sc.Init(bytes.NewBuffer(b))
-	fmt.Println(offset)
-	for i := 0; i < int(offset); i++ {
-		sc.Next()
-	}
-	pos := sc.Pos()
-
-	relFile, err := filepath.Rel(specdir, fpath)
-	if err != nil {
-		return "", err
-	}
-	return "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(pos.Line), nil
 }

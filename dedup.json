@@ -80,7 +80,7 @@
             ]
         },
         "picker": {
-            "spec_path": "/signalr/resource-manager/Microsoft.SignalRService"
+            "spec_path": "^signalr/resource-manager/Microsoft.SignalRService"
         }
     },
     "recoveryservices": {
@@ -92,7 +92,7 @@
             ]
         },
         "picker": {
-            "spec_path": "/recoveryservices/resource-manager/Microsoft.RecoveryServices"
+            "spec_path": "^recoveryservices/resource-manager/Microsoft.RecoveryServices"
         }
     },
     "solutions": {
@@ -100,7 +100,7 @@
             "rp": "MICROSOFT.SOLUTIONS"
         },
         "picker": {
-            "spec_path": "/solutions/resource-manager/"
+            "spec_path": "^solutions/resource-manager/"
         }
     },
     "containerservice": {
@@ -156,7 +156,7 @@
             "rp": "MICROSOFT.DEVICES"
         },
         "picker": {
-            "spec_path": "/iothub/"
+            "spec_path": "^iothub/"
         }
     }
 }
