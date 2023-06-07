@@ -58,5 +58,5 @@ func BuildGithubLink(ref jsonreference.Ref, commit, specdir string) (string, err
 		return "", err
 	}
 
-	return "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(pos.Line), nil
+	return "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(pos.Line+1), nil
 }
