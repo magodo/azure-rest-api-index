@@ -42,7 +42,6 @@ func BuildGithubLink(ref jsonreference.Ref, commit, specdir string) (string, err
 	}
 	var sc scanner.Scanner
 	sc.Init(bytes.NewBuffer(b))
-	fmt.Println(offset)
 	for i := 0; i < int(offset); i++ {
 		sc.Next()
 	}
