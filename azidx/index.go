@@ -86,6 +86,10 @@ func (o *OperationRefs) UnmarshalJSON(b []byte) error {
 	}
 	refs := OperationRefs{}
 	for k, v := range m {
+		v, err := url.PathUnescape(v)
+		if err != nil {
+			return err
+		}
 		refs[PathPatternStr(k)] = jsonreference.MustCreateRef(v)
 	}
 	*o = refs
