@@ -62,6 +62,7 @@
         "matcher": {
             "rp": "MICROSOFT.COSTMANAGEMENT",
             "paths": [
+                "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/{}",
                 "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/TAGINHERITANCE",
                 "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS"
             ]

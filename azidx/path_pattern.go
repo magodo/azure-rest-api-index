@@ -61,7 +61,7 @@ func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path st
 				return nil, fmt.Errorf("undefined parameter name %q", name)
 			}
 
-			// In case this segment is an enum parameter, replicate the existing patterns to time the amount of enum variants with the variant appended.
+			// In case this segment is an enum parameter, replicate the existing patterns to time of (the amount of enum variants with the variant + 1 of the original wildcard) appended
 			if param.HasEnum() {
 				var newSegmentSet [][]PathSegment
 				for _, enum := range param.Enum {
@@ -72,6 +72,12 @@ func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path st
 						newSegs[len(newSegs)-1] = PathSegment{FixedName: enum.(string)}
 						newSegmentSet = append(newSegmentSet, newSegs)
 					}
+				}
+				for _, segs := range segmentSet {
+					newSegs := make([]PathSegment, len(segs)+1)
+					copy(newSegs, segs)
+					newSegs[len(newSegs)-1] = PathSegment{IsParameter: true}
+					newSegmentSet = append(newSegmentSet, newSegs)
 				}
 				segmentSet = newSegmentSet
 				continue
