@@ -53,7 +53,7 @@ func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path st
 
 	// Initialliy, there is only one []PathSegment in the segment set.
 	segmentSet := [][]PathSegment{{}}
-	for _, seg := range strings.Split(strings.TrimLeft(path, "/"), "/") {
+	for _, seg := range strings.Split(strings.Trim(path, "/"), "/") {
 		if isParameterizedSegment(seg) {
 			name := strings.Trim(seg, "{}")
 			param, ok := parameterMap[name]
@@ -111,7 +111,7 @@ func ParsePathPatternFromSwagger(specFile string, swagger *spec.Swagger, path st
 
 func ParsePathPatternFromString(path string) *PathPattern {
 	var segments []PathSegment
-	for _, seg := range strings.Split(strings.TrimLeft(path, "/"), "/") {
+	for _, seg := range strings.Split(strings.Trim(path, "/"), "/") {
 		switch seg {
 		case "{}":
 			segments = append(segments, PathSegment{IsParameter: true})
