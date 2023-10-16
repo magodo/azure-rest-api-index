@@ -146,6 +146,31 @@ func TestMatcher_Match(t *testing.T) {
 			input:  "/foo/a/b/baz",
 			expect: true,
 		},
+		{
+			name: "matching string with consecutive any wildcard in the middle",
+			matcher: Matcher{
+				PrefixSep: true,
+				Separater: "/",
+				Segments: []MatchSegment{
+					{
+						Value: "foo",
+					},
+					{
+						IsWildcard: true,
+						IsAny:      true,
+					},
+					{
+						IsWildcard: true,
+						IsAny:      true,
+					},
+					{
+						Value: "baz",
+					},
+				},
+			},
+			input:  "/foo/a/b/baz",
+			expect: true,
+		},
 	}
 
 	for _, tt := range cases {
