@@ -7,7 +7,7 @@ A tool/library to index https://github.com/Azure/azure-rest-api-specs, which is 
 First, you'll need to build the index by running:
 
 ```shell
-azure-rest-api-index build -o index.json -dedup dedup.json <specs rootdir>/specification
+azure-rest-api-index build -o index.json <specs rootdir>/specification
 ```
 
 The *dedup.json* above is a file used for resolving duplicated swagger definitions, which is maintained by the repo.
