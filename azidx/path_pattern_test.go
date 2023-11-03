@@ -114,6 +114,46 @@ func TestParsePathPatternFromSwagger(t *testing.T) {
 						},
 					},
 				},
+				{
+					Segments: []PathSegment{
+						{
+							FixedName: "providers",
+						},
+						{
+							FixedName: "Microsoft.CostManagement",
+						},
+						{
+							IsParameter: true,
+						},
+						{
+							IsParameter: true,
+						},
+						{
+							FixedName: "alerts",
+						},
+					},
+				},
+			},
+		},
+		{
+			path: "/providers/Microsoft.EventGrid/networkSecurityPerimeterConfigurations/{perimeterGuid}.{associationName}",
+			expect: []PathPattern{
+				{
+					Segments: []PathSegment{
+						{
+							FixedName: "providers",
+						},
+						{
+							FixedName: "Microsoft.EventGrid",
+						},
+						{
+							FixedName: "networkSecurityPerimeterConfigurations",
+						},
+						{
+							IsParameter: true,
+						},
+					},
+				},
 			},
 		},
 	}

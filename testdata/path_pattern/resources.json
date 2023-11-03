@@ -64,6 +64,24 @@
           }
         ]
       }
+    },
+    "/providers/Microsoft.EventGrid/networkSecurityPerimeterConfigurations/{perimeterGuid}.{associationName}": {
+      "get": {
+        "parameters": [
+          {
+            "name": "perimeterGuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "associationName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ]
+      }
     }
   },
   "parameters": {
