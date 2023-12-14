@@ -231,7 +231,18 @@ func collectSpecs(rootdir string) ([]string, error) {
 		}); err != nil {
 		return nil, err
 	}
+	// Deduplicate
+	m := map[string]struct{}{}
+	for _, v := range speclist {
+		m[v] = struct{}{}
+	}
+	speclist = make([]string, 0, len(m))
+	for k := range m {
+		speclist = append(speclist, k)
+	}
+	// Sort
 	sort.Slice(speclist, func(i, j int) bool { return speclist[i] < speclist[j] })
+
 	return speclist, nil
 }
 
