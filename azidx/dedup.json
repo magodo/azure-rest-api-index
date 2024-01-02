@@ -28,7 +28,7 @@
     "servicefabric3": {
         "matcher": {
             "rp": "MICROSOFT.SERVICEFABRIC",
-            "version": "2020-01-01-preview$"
+            "version": "2020-01-01-preview|2023-11-01-preview"
         },
         "picker": {
             "spec_path": "managedcluster.json"
