@@ -159,5 +159,16 @@
         "picker": {
             "spec_path": "^iothub/"
         }
+    },
+    "portalservices": {
+        "matcher": {
+            "rp": "MICROSOFT.PORTALSERVICES",
+            "paths": [
+                "/PROVIDERS/MICROSOFT.PORTALSERVICES/OPERATIONS"
+            ]
+        },
+        "picker": {
+            "spec_path": "copilotSettings.json"
+        }
     }
 }
