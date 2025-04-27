@@ -170,5 +170,14 @@
         "picker": {
             "spec_path": "copilotSettings.json"
         }
+    },
+    "migrate": {
+        "matcher": {
+            "rp": "MICROSOFT.MIGRATE",
+            "paths": [
+                "/PROVIDERS/MICROSOFT.MIGRATE/OPERATIONS"
+            ]
+        },
+        "ignore": true
     }
 }
