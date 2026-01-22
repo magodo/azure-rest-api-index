@@ -179,5 +179,13 @@
             ]
         },
         "ignore": true
+    },
+    "azurestackhci": {
+        "matcher": {
+            "rp": "MICROSOFT.AZURESTACKHCI"
+        },
+        "picker": {
+            "spec_path": "Microsoft.AzureStackHCI/StackHCI/"
+        }
     }
 }
