@@ -20,8 +20,9 @@ type Info struct {
 
 // SpecPathInfo returns the SpecPathInfo of the Path, given the Path is a relative path to a swagger spec.
 // e.g.
+// - resource-manager/Microsoft.Compute/stable/2020-01-01/compute.json
 // - compute/resource-manager/Microsoft.Compute/stable/2020-01-01/compute.json
-// - mediaservices/resource-manager/Microsoft.Media/Accounts/preview/2019-05-01-preview/Accounts.json
+// - mediaservices/resource-manager/Microsoft.Media/Accounts/preview/2019-05-01-preview/Accounts.json (with sub-servce)
 func SpecPathInfo(p string) (*Info, error) {
 	if filepath.IsAbs(p) {
 		return nil, fmt.Errorf("expect relative path to the spec from spec rootdir, got %s", p)

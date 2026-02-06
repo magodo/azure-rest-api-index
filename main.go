@@ -16,8 +16,9 @@ import (
 var (
 	flagVerbose bool
 
-	flagOutput string
-	flagDedup  string
+	flagOutput   string
+	flagDedup    string
+	flagServices cli.StringSlice
 
 	flagIndex   string
 	flagMethod  string
@@ -59,6 +60,11 @@ func main() {
 						Usage:       `Deduplicate file`,
 						Destination: &flagDedup,
 					},
+					&cli.StringSliceFlag{
+						Name:        "services",
+						Usage:       `Only build index for a list of services (e.g. "compute")`,
+						Destination: &flagServices,
+					},
 				},
 				Action: func(c *cli.Context) error {
 					if c.NArg() == 0 {
@@ -68,7 +74,7 @@ func main() {
 						return fmt.Errorf("More than one arguments specified")
 					}
 					specdir := c.Args().First()
-					index, err := azidx.BuildIndex(specdir, flagDedup)
+					index, err := azidx.BuildIndex(specdir, flagDedup, flagServices.Value())
 					if err != nil {
 						return err
 					}

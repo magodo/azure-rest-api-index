@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -101,8 +102,9 @@ type PathPatternStr string
 
 // BuildIndex builds the index file for the given specification directory.
 // Since there are duplicated specification files in the directory, that defines the same API (same API path, version, operation), users can
-// optionally specify a deduplication file. Otherwise, it will use a default dedup file instead.
-func BuildIndex(specdir string, dedupFile string) (*Index, error) {
+// Optionally specify a deduplication file. Otherwise, it will use a default dedup file instead.
+// Optionally specify a list of services (e.g. `compute`) to build. Otherwise, it will generate for every service.
+func BuildIndex(specdir string, dedupFile string, services []string) (*Index, error) {
 	specdir, err := filepath.Abs(specdir)
 	if err != nil {
 		return nil, err
@@ -138,8 +140,8 @@ func BuildIndex(specdir string, dedupFile string) (*Index, error) {
 		commit = ref.Hash().String()
 	}
 
-	logger.Info("Collecting specs", "dir", specdir)
-	l, err := collectSpecs(specdir)
+	logger.Info("Collecting specs", "dir", specdir, "services", services)
+	l, err := collectSpecs(specdir, services)
 	if err != nil {
 		return nil, fmt.Errorf("collecting specs: %v", err)
 	}
@@ -196,7 +198,8 @@ func BuildIndex(specdir string, dedupFile string) (*Index, error) {
 }
 
 // collectSpecs collects all Swagger specs based on the effective tags in each RP's readme.md.
-func collectSpecs(rootdir string) ([]string, error) {
+// If services is not nil, it will only collect specs for the specified services.
+func collectSpecs(rootdir string, services []string) ([]string, error) {
 	var speclist []string
 
 	if err := filepath.WalkDir(rootdir,
@@ -204,7 +207,22 @@ func collectSpecs(rootdir string) ([]string, error) {
 			if err != nil {
 				return err
 			}
+
 			if d.IsDir() {
+				relDir, err := filepath.Rel(rootdir, p)
+				if err != nil {
+					return err
+				}
+				// Walking the rootdir, move on
+				if relDir == "." {
+					return nil
+				}
+
+				if relDirs := strings.Split(relDir, string(os.PathSeparator)); len(relDirs) == 1 && len(services) != 0 {
+					if !slices.Contains(services, relDirs[0]) {
+						return filepath.SkipDir
+					}
+				}
 				if strings.EqualFold(d.Name(), "data-plane") {
 					return filepath.SkipDir
 				}
