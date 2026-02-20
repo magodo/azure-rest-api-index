@@ -2,17 +2,14 @@ package azidx
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-openapi/jsonpointer"
-	"github.com/go-openapi/jsonreference"
 	"github.com/magodo/jsonpointerpos"
 )
 
-func BuildGithubLink(ref jsonreference.Ref, commit, specdir string) (string, error) {
+func BuildGithubLink(fpath string, fpos jsonpointerpos.JSONPointerPosition, commit, specdir string) (string, error) {
 	repo, err := git.PlainOpen(filepath.Dir(specdir))
 	if err != nil {
 		if err != git.ErrRepositoryNotExists {
@@ -28,31 +25,10 @@ func BuildGithubLink(ref jsonreference.Ref, commit, specdir string) (string, err
 		}
 	}
 
-	fpath, err := filepath.Abs(filepath.Join(specdir, ref.GetURL().Path))
-	if err != nil {
-		return "", err
-	}
-	b, err := os.ReadFile(fpath)
-	if err != nil {
-		return "", err
-	}
-
-	m, err := jsonpointerpos.GetPositions(string(b), []jsonpointer.Pointer{*ref.GetPointer()})
-	if err != nil {
-		return "", err
-	}
-
-	pos := m[ref.GetPointer().String()]
-
-	specdir, err = filepath.Abs(specdir)
-	if err != nil {
-		return "", err
-	}
-
 	relFile, err := filepath.Rel(specdir, fpath)
 	if err != nil {
 		return "", err
 	}
 
-	return "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(pos.Line), nil
+	return "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(fpos.Line), nil
 }

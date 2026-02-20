@@ -6,8 +6,13 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
 
+	"github.com/go-openapi/jsonpointer"
+	"github.com/go-openapi/jsonreference"
 	"github.com/magodo/azure-rest-api-index/azidx"
+	"github.com/magodo/jsonpointerpos"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/urfave/cli/v2"
@@ -139,19 +144,26 @@ func main() {
 					if err != nil {
 						return err
 					}
-					pointerTokens := ref.GetPointer().DecodedTokens()
-					out := fmt.Sprintf(`
-Raw     : %s
-File	: %s
-Path	: %s
-Method  : %s
-`, ref.String(), ref.GetURL().Path, pointerTokens[1], pointerTokens[2])
 
-					if index.Commit != "" && flagSpecDir != "" {
-						link, err := azidx.BuildGithubLink(*ref, index.Commit, flagSpecDir)
+					out := fmt.Sprintf(`
+Ref     : %s
+`, ref.String())
+
+					if flagSpecDir != "" {
+						flagSpecDir, err = filepath.Abs(flagSpecDir)
 						if err != nil {
 							return err
 						}
+						ref.GetURL().Path = filepath.Join(flagSpecDir, ref.GetURL().Path)
+						pos, err := getPosition(ref)
+						if err != nil {
+							return err
+						}
+						link, err := azidx.BuildGithubLink(ref.GetURL().Path, *pos, index.Commit, flagSpecDir)
+						if err != nil {
+							return err
+						}
+						out += "VSCode  : " + "vscode://file/" + ref.GetURL().Path + ":" + strconv.Itoa(pos.Line) + "\n"
 						out += "Link    : " + link + "\n"
 					}
 
@@ -178,4 +190,22 @@ func initLogger() {
 		Color: hclog.AutoColor,
 	})
 	azidx.SetLogger(logger)
+}
+
+func getPosition(ref *jsonreference.Ref) (*jsonpointerpos.JSONPointerPosition, error) {
+	b, err := os.ReadFile(ref.GetURL().Path)
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := jsonpointerpos.GetPositions(string(b), []jsonpointer.Pointer{*ref.GetPointer()})
+	if err != nil {
+		return nil, err
+	}
+
+	pos, ok := m[ref.GetPointer().String()]
+	if !ok {
+		return nil, fmt.Errorf("can't find the pointer's position: %v", ref.String())
+	}
+	return &pos, nil
 }
