@@ -49,7 +49,19 @@ func TestSPecPathInfo(t *testing.T) {
 				IsPreview:          true,
 				Version:            "2019-05-01-preview",
 				SpecName:           "Accounts.json",
-				subservice:         ptr("Accounts"),
+				subservices:        []string{"Accounts"},
+			},
+		},
+		{
+			name: "regular spec file with multiple sub services",
+			path: "compute/resource-manager/Microsoft.Compute/Compute/Cloudservice/stable/2022-04-04/cloudService.json",
+			pathInfo: &Info{
+				ResourceProvider:   "compute",
+				ResourceProviderMS: "Microsoft.Compute",
+				IsPreview:          false,
+				Version:            "2022-04-04",
+				SpecName:           "cloudService.json",
+				subservices:        []string{"Compute", "Cloudservice"},
 			},
 		},
 		{
@@ -114,9 +126,20 @@ func TestInfo_ToPath(t *testing.T) {
 				IsPreview:          true,
 				Version:            "2019-05-01-preview",
 				SpecName:           "Accounts.json",
-				subservice:         ptr("Accounts"),
+				subservices:        []string{"Accounts"},
 			},
 			expect: "mediaservices/resource-manager/Microsoft.Media/Accounts/preview/2019-05-01-preview/Accounts.json",
+		},
+		{
+			input: Info{
+				ResourceProvider:   "compute",
+				ResourceProviderMS: "Microsoft.Compute",
+				IsPreview:          false,
+				Version:            "2022-04-04",
+				SpecName:           "cloudService.json",
+				subservices:        []string{"Compute", "Cloudservice"},
+			},
+			expect: "compute/resource-manager/Microsoft.Compute/Compute/Cloudservice/stable/2022-04-04/cloudService.json",
 		},
 	}
 

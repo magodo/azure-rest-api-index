@@ -13,7 +13,7 @@ import (
 
 func TestBuildIndex(t *testing.T) {
 	specRoot := "../testdata/spec"
-	idx, err := BuildIndex(specRoot, "")
+	idx, err := BuildIndex(specRoot, "", nil)
 	require.NoError(t, err)
 	b, err := json.MarshalIndent(idx, "", "  ")
 	require.NoError(t, err)
