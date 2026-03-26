@@ -205,5 +205,27 @@
         "picker": {
             "spec_path": "Microsoft.AzureStackHCI/StackHCI/"
         }
+    },
+    "machinelearningservices": {
+        "matcher": {
+            "rp": "MICROSOFT.MACHINELEARNINGSERVICES",
+            "version": "2024-10-01-preview"
+
+        },
+        "picker": {
+            "spec_path": "openapi.json"
+        }
+    },
+    "redis": {
+        "matcher": {
+            "rp": "MICROSOFT.CACHE",
+            "version": "2025-08-01-preview",
+            "paths": [
+                "/PROVIDERS/MICROSOFT.CACHE/OPERATIONS"
+            ]
+        },
+        "picker": {
+            "spec_path": "redis/resource-manager/Microsoft.Cache/Redis/preview/2025-08-01-preview/redis.json"
+        }
     }
 }
