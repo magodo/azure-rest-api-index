@@ -339,6 +339,17 @@ func buildOpsIndex(specdir string, deduplicator Deduplicator, specs []string) (F
 				candidateRefs = append(candidateRefs, ref)
 			}
 		}
+		// If there are exactly two candidate refs and one of them's base file is openapi.json, it wins.
+		// This is a migration happening in MSFT of using Typespec.
+		if len(candidateRefs) == 2 {
+			for _, ref := range candidateRefs {
+				if filepath.Base(ref.GetURL().Path) == "openapi.json" {
+					candidateRefs = []jsonreference.Ref{ref}
+					break
+				}
+			}
+		}
+
 		if len(candidateRefs) == 1 {
 			ops[k.OpLocator][k.PathPatternStr] = candidateRefs[0]
 			delete(newdups, k)
@@ -352,18 +363,18 @@ func buildOpsIndex(specdir string, deduplicator Deduplicator, specs []string) (F
 		var matcherName string
 
 		// Look for the dedup operator
-		if deduplicator != nil {
-			for matcher, op := range deduplicator {
-				op := op
-				if matcher.Match(k.OpLocator, string(k.PathPatternStr)) {
-					if dedupOp != nil {
-						return nil, fmt.Errorf("Duplicate matchers in duplicator that match %s: %s vs %s", k, matcherName, matcher.Name)
-					}
-					dedupOp = &op
-					matcherName = matcher.Name
+		for matcher, op := range deduplicator {
+			op := op
+			if matcher.Match(k.OpLocator, string(k.PathPatternStr)) {
+				if dedupOp != nil {
+					return nil, fmt.Errorf("Duplicate matchers in duplicator that match %s: %s vs %s", k, matcherName, matcher.Name)
 				}
+				dedupOp = &op
+				matcherName = matcher.Name
 			}
 		}
+
+		logger.Warn("dedup", "matcher", matcherName)
 
 		var refStrs []string
 		for _, ref := range refs {
@@ -552,8 +563,7 @@ func parseSpec(specdir, p string) (FlattenOpIndex, error) {
 					index[opLoc] = map[PathPatternStr]jsonreference.Ref{}
 				}
 				if exist, ok := index[opLoc][pathPatternStr]; ok {
-					return nil, fmt.Errorf(
-						"operation locator %#v for path pattern %s already applied with operation %s, conflicts to the new operation %s", opLoc, pathPatternStr, &exist, &opRef)
+					logger.Warn("operation locator is already applied", "opLoc", opLoc, "pathPattern", pathPatternStr, "exist", exist, "new", opRef)
 				}
 				index[opLoc][pathPatternStr] = opRef
 			}

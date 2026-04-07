@@ -1,231 +1,231 @@
 {
-    "aad": {
-        "matcher": {
-            "rp": "MICROSOFT.AAD"
-        },
-        "picker": {
-            "spec_path": "domainservices.json"
-        }
+  "aad": {
+    "matcher": {
+      "rp": "MICROSOFT.AAD"
     },
-    "servicefabric1": {
-        "matcher": {
-            "rp": "MICROSOFT.SERVICEFABRIC",
-            "version": "2017-07-01-preview$"
-        },
-        "picker": {
-            "spec_path": "servicefabric.json"
-        }
-    },
-    "servicefabric2": {
-        "matcher": {
-            "rp": "MICROSOFT.SERVICEFABRIC",
-            "version": "2019-03-01$|2019-03-01-preview|2019-06-01-preview|2019-11-01-preview|2020-03-01"
-        },
-        "picker": {
-            "spec_path": "cluster.json"
-        }
-    },
-    "servicefabric3": {
-        "matcher": {
-            "rp": "MICROSOFT.SERVICEFABRIC",
-            "version": "2020-01-01-preview|2023-11-01-preview"
-        },
-        "picker": {
-            "spec_path": "managedcluster.json"
-        }
-    },
-    "compute-vmss-nic": {
-        "matcher": {
-            "rp": "MICROSOFT.COMPUTE",
-            "paths": [
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/NETWORKINTERFACES",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}"
-            ]
-        },
-        "any": true
-    },
-    "compute-vmss-pip": {
-        "matcher": {
-            "rp": "MICROSOFT.COMPUTE",
-            "paths": [
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/PUBLICIPADDRESSES",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES/{}"
-            ]
-        },
-        "any": true
-    },
-    "costmanagement": {
-        "matcher": {
-            "rp": "MICROSOFT.COSTMANAGEMENT",
-            "paths": [
-                "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/{}",
-                "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/TAGINHERITANCE",
-                "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS"
-            ]
-        },
-        "picker": {
-            "spec_path": "settings.json"
-        }
-    },
-    "signalrservice": {
-        "matcher": {
-            "rp": "MICROSOFT.SIGNALRSERVICE",
-            "paths": [
-                "/PROVIDERS/MICROSOFT.SIGNALRSERVICE/OPERATIONS",
-                "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.SIGNALRSERVICE/LOCATIONS/{}/USAGES",
-                "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.SIGNALRSERVICE/LOCATIONS/{}/CHECKNAMEAVAILABILITY"
-            ]
-        },
-        "picker": {
-            "spec_path": "^signalr/resource-manager/Microsoft.SignalRService"
-        }
-    },
-    "recoveryservices": {
-        "matcher": {
-            "rp": "MICROSOFT.RECOVERYSERVICES",
-            "paths": [
-                "/PROVIDERS/MICROSOFT.RECOVERYSERVICES/OPERATIONS",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.RECOVERYSERVICES/VAULTS/{}/REGISTEREDIDENTITIES/{}"
-            ]
-        },
-        "picker": {
-            "spec_path": "^recoveryservices/resource-manager/Microsoft.RecoveryServices"
-        }
-    },
-    "solutions": {
-        "matcher": {
-            "rp": "MICROSOFT.SOLUTIONS"
-        },
-        "picker": {
-            "spec_path": "^solutions/resource-manager/"
-        }
-    },
-    "containerservice": {
-        "matcher": {
-            "rp": "MICROSOFT.CONTAINERSERVICE"
-        },
-        "picker": {
-            "spec_path": "/aks/"
-        }
-    },
-    "sql1": {
-        "matcher": {
-            "rp": "MICROSOFT.SQL",
-            "paths": [
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/RECOMMENDEDELASTICPOOLS.*"
-            ]
-        },
-        "picker": {
-            "spec_path": "recommendedElasticPools.json"
-        }
-    },
-    "sql2": {
-        "matcher": {
-            "rp": "MICROSOFT.SQL",
-            "paths": [
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/AUDITINGSETTINGS/.*"
-            ]
-        },
-        "picker": {
-            "spec_path": "blobAuditing.json"
-        }
-    },
-    "sql3": {
-        "matcher": {
-            "rp": "MICROSOFT.SQL",
-            "paths": [
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/RESUME",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/MOVE",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/PAUSE",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/FAILOVER",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/UPGRADEDATAWAREHOUSE",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/UPGRADEDATAWAREHOUSE",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/ELASTICPOOLS.*",
-                "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/INACCESSIBLEDATABASES.*"
-            ]
-        },
-        "picker": {
-            "spec_path": "Databases.json"
-        }
-    },
-    "billing": {
-        "matcher": {
-            "rp": "MICROSOFT.BILLING"
-        },
-        "picker": {
-            "spec_path": "billingV2.json"
-        }
-    },
-    "storage": {
-        "matcher": {
-            "rp": "MICROSOFT.STORAGE"
-        },
-        "picker": {
-            "spec_path": "managementpolicy.json"
-        }
-    },
-    "devices": {
-        "matcher": {
-            "rp": "MICROSOFT.DEVICES"
-        },
-        "picker": {
-            "spec_path": "^iothub/"
-        }
-    },
-    "portalservices": {
-        "matcher": {
-            "rp": "MICROSOFT.PORTALSERVICES",
-            "paths": [
-                "/PROVIDERS/MICROSOFT.PORTALSERVICES/OPERATIONS"
-            ]
-        },
-        "picker": {
-            "spec_path": "copilotSettings.json"
-        }
-    },
-    "migrate": {
-        "matcher": {
-            "rp": "MICROSOFT.MIGRATE",
-            "paths": [
-                "/PROVIDERS/MICROSOFT.MIGRATE/OPERATIONS"
-            ]
-        },
-        "ignore": true
-    },
-    "azurestackhci": {
-        "matcher": {
-            "rp": "MICROSOFT.AZURESTACKHCI"
-        },
-        "picker": {
-            "spec_path": "Microsoft.AzureStackHCI/StackHCI/"
-        }
-    },
-    "machinelearningservices": {
-        "matcher": {
-            "rp": "MICROSOFT.MACHINELEARNINGSERVICES",
-            "version": "2024-10-01-preview"
-
-        },
-        "picker": {
-            "spec_path": "openapi.json"
-        }
-    },
-    "redis": {
-        "matcher": {
-            "rp": "MICROSOFT.CACHE",
-            "version": "2025-08-01-preview",
-            "paths": [
-                "/PROVIDERS/MICROSOFT.CACHE/OPERATIONS"
-            ]
-        },
-        "picker": {
-            "spec_path": "redis/resource-manager/Microsoft.Cache/Redis/preview/2025-08-01-preview/redis.json"
-        }
+    "picker": {
+      "spec_path": "domainservices.json"
     }
+  },
+  "azurestackhci": {
+    "matcher": {
+      "rp": "MICROSOFT.AZURESTACKHCI"
+    },
+    "picker": {
+      "spec_path": "Microsoft.AzureStackHCI/StackHCI/"
+    }
+  },
+  "billing": {
+    "matcher": {
+      "rp": "MICROSOFT.BILLING"
+    },
+    "picker": {
+      "spec_path": "billingV2.json"
+    }
+  },
+  "compute-vmss-nic": {
+    "any": true,
+    "matcher": {
+      "paths": [
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/NETWORKINTERFACES",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}"
+      ],
+      "rp": "MICROSOFT.COMPUTE"
+    }
+  },
+  "compute-vmss-pip": {
+    "any": true,
+    "matcher": {
+      "paths": [
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/PUBLICIPADDRESSES",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINESCALESETS/{}/VIRTUALMACHINES/{}/NETWORKINTERFACES/{}/IPCONFIGURATIONS/{}/PUBLICIPADDRESSES/{}"
+      ],
+      "rp": "MICROSOFT.COMPUTE"
+    }
+  },
+  "containerservice": {
+    "matcher": {
+      "rp": "MICROSOFT.CONTAINERSERVICE"
+    },
+    "picker": {
+      "spec_path": "/aks/"
+    }
+  },
+  "costmanagement": {
+    "matcher": {
+      "paths": [
+        "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/{}",
+        "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS/TAGINHERITANCE",
+        "/{}/PROVIDERS/MICROSOFT.COSTMANAGEMENT/SETTINGS"
+      ],
+      "rp": "MICROSOFT.COSTMANAGEMENT"
+    },
+    "picker": {
+      "spec_path": "settings.json"
+    }
+  },
+  "devices": {
+    "matcher": {
+      "rp": "MICROSOFT.DEVICES"
+    },
+    "picker": {
+      "spec_path": "^iothub/"
+    }
+  },
+  "migrate": {
+    "ignore": true,
+    "matcher": {
+      "paths": [
+        "/PROVIDERS/MICROSOFT.MIGRATE/OPERATIONS"
+      ],
+      "rp": "MICROSOFT.MIGRATE"
+    }
+  },
+  "monitor": {
+    "matcher": {
+      "paths": [
+        "/PROVIDERS/MICROSOFT.MONITOR/OPERATIONS"
+      ]
+    },
+    "picker": {
+      "spec_path": "monitor/resource-manager/Microsoft.Monitor/Operations/preview/2025-05-03-preview/operations.json"
+    }
+  },
+  "portalservices": {
+    "matcher": {
+      "paths": [
+        "/PROVIDERS/MICROSOFT.PORTALSERVICES/OPERATIONS"
+      ],
+      "rp": "MICROSOFT.PORTALSERVICES"
+    },
+    "picker": {
+      "spec_path": "copilotSettings.json"
+    }
+  },
+  "recoveryservices": {
+    "matcher": {
+      "paths": [
+        "/PROVIDERS/MICROSOFT.RECOVERYSERVICES/OPERATIONS",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.RECOVERYSERVICES/VAULTS/{}/REGISTEREDIDENTITIES/{}"
+      ],
+      "rp": "MICROSOFT.RECOVERYSERVICES"
+    },
+    "picker": {
+      "spec_path": "^recoveryservices/resource-manager/Microsoft.RecoveryServices"
+    }
+  },
+  "redis": {
+    "matcher": {
+      "paths": [
+        "/PROVIDERS/MICROSOFT.CACHE/OPERATIONS"
+      ],
+      "rp": "MICROSOFT.CACHE",
+      "version": "2025-08-01-preview"
+    },
+    "picker": {
+      "spec_path": "redis/resource-manager/Microsoft.Cache/Redis/preview/2025-08-01-preview/redis.json"
+    }
+  },
+  "servicefabric1": {
+    "matcher": {
+      "rp": "MICROSOFT.SERVICEFABRIC",
+      "version": "2017-07-01-preview$"
+    },
+    "picker": {
+      "spec_path": "servicefabric.json"
+    }
+  },
+  "servicefabric2": {
+    "matcher": {
+      "rp": "MICROSOFT.SERVICEFABRIC",
+      "version": "2019-03-01$|2019-03-01-preview|2019-06-01-preview|2019-11-01-preview|2020-03-01"
+    },
+    "picker": {
+      "spec_path": "cluster.json"
+    }
+  },
+  "servicefabric3": {
+    "matcher": {
+      "rp": "MICROSOFT.SERVICEFABRIC",
+      "version": "2020-01-01-preview|2023-11-01-preview"
+    },
+    "picker": {
+      "spec_path": "managedcluster.json"
+    }
+  },
+  "signalrservice": {
+    "matcher": {
+      "paths": [
+        "/PROVIDERS/MICROSOFT.SIGNALRSERVICE/OPERATIONS",
+        "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.SIGNALRSERVICE/LOCATIONS/{}/USAGES",
+        "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.SIGNALRSERVICE/LOCATIONS/{}/CHECKNAMEAVAILABILITY"
+      ],
+      "rp": "MICROSOFT.SIGNALRSERVICE"
+    },
+    "picker": {
+      "spec_path": "^signalr/resource-manager/Microsoft.SignalRService"
+    }
+  },
+  "solutions": {
+    "matcher": {
+      "rp": "MICROSOFT.SOLUTIONS"
+    },
+    "picker": {
+      "spec_path": "^solutions/resource-manager/"
+    }
+  },
+  "sql1": {
+    "matcher": {
+      "paths": [
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/RECOMMENDEDELASTICPOOLS.*"
+      ],
+      "rp": "MICROSOFT.SQL"
+    },
+    "picker": {
+      "spec_path": "recommendedElasticPools.json"
+    }
+  },
+  "sql2": {
+    "matcher": {
+      "paths": [
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/AUDITINGSETTINGS/.*"
+      ],
+      "rp": "MICROSOFT.SQL"
+    },
+    "picker": {
+      "spec_path": "blobAuditing.json"
+    }
+  },
+  "sql3": {
+    "matcher": {
+      "paths": [
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/RESUME",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/MOVE",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/PAUSE",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/FAILOVER",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/UPGRADEDATAWAREHOUSE",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/DATABASES/{}/UPGRADEDATAWAREHOUSE",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/ELASTICPOOLS.*",
+        "/SUBSCRIPTIONS/{}/RESOURCEGROUPS/{}/PROVIDERS/MICROSOFT.SQL/SERVERS/{}/INACCESSIBLEDATABASES.*"
+      ],
+      "rp": "MICROSOFT.SQL"
+    },
+    "picker": {
+      "spec_path": "Databases.json"
+    }
+  },
+  "storage": {
+    "matcher": {
+      "rp": "MICROSOFT.STORAGE"
+    },
+    "picker": {
+      "spec_path": "managementpolicy.json"
+    }
+  }
 }

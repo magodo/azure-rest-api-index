@@ -58,7 +58,7 @@ type DedupRecord struct {
 
 type DedupMatcherIn struct {
 	RP      string   `json:"rp,omitempty"`
-	Version string   `json:"version,omitemptyn"`
+	Version string   `json:"version,omitempty"`
 	RT      string   `json:"rt,omitempty"`
 	ACT     string   `json:"act,omitempty"`
 	Method  string   `json:"method,omitempty"`
