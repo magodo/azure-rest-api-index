@@ -7,6 +7,28 @@
       "spec_path": "domainservices.json"
     }
   },
+  "authorization": {
+    "matcher": {
+      "rp": "MICROSOFT.AUTHORIZATION",
+      "paths": [
+        "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.AUTHORIZATION/CLASSICADMINISTRATORS"
+      ]
+    },
+    "picker": {
+      "spec_path": "ClassicAdmin.json"
+    }
+  },
+  "authorization2": {
+    "matcher": {
+      "rp": "MICROSOFT.AUTHORIZATION",
+      "paths": [
+        "/PROVIDERS/MICROSOFT.AUTHORIZATION/ELEVATEACCESS"
+      ]
+    },
+    "picker": {
+      "spec_path": "ClassicAdmin.json"
+    }
+  },
   "azurestackhci": {
     "matcher": {
       "rp": "MICROSOFT.AZURESTACKHCI"
