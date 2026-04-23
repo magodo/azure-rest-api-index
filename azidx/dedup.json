@@ -98,6 +98,19 @@
       "spec_path": "^iothub/"
     }
   },
+  "insights": {
+    "matcher": {
+      "rp": "MICROSOFT.INSIGHTS",
+      "paths": [
+        "/PROVIDERS/MICROSOFT.INSIGHTS/EVENTTYPES/MANAGEMENT/VALUES",
+        "/SUBSCRIPTIONS/{}/PROVIDERS/MICROSOFT.INSIGHTS/EVENTTYPES/MANAGEMENT/VALUES",
+        "/PROVIDERS/MICROSOFT.INSIGHTS/EVENTCATEGORIES"
+      ]
+    },
+    "picker": {
+      "spec_path": "activityLogs.json"
+    }
+  },
   "migrate": {
     "ignore": true,
     "matcher": {
