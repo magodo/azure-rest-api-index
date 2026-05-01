@@ -122,12 +122,13 @@
   },
   "monitor": {
     "matcher": {
+      "version": "2023-10-01-preview",
       "paths": [
         "/PROVIDERS/MICROSOFT.MONITOR/OPERATIONS"
       ]
     },
     "picker": {
-      "spec_path": "monitor/resource-manager/Microsoft.Monitor/Operations/preview/2025-05-03-preview/operations.json"
+      "spec_path": "pipelineGroups.json"
     }
   },
   "portalservices": {
@@ -163,6 +164,15 @@
     },
     "picker": {
       "spec_path": "redis/resource-manager/Microsoft.Cache/Redis/preview/2025-08-01-preview/redis.json"
+    }
+  },
+  "security": {
+    "matcher": {
+      "rp": "MICROSOFT.SECURITY",
+      "version": "2019-08-01"
+    },
+    "picker": {
+      "spec_path": "security-IoTSecurity.json" 
     }
   },
   "servicefabric1": {
