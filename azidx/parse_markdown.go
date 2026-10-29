@@ -58,6 +58,9 @@ func SpecListFromReadmeMD(b []byte) ([]string, error) {
 	}
 	var out []string
 	for p := range specSet {
+		if strings.HasPrefix(p, "examples/") {
+			continue
+		}
 		out = append(out, p)
 	}
 	sort.Slice(out, func(i, j int) bool {
